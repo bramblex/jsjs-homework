@@ -3,19 +3,19 @@ const traverse = require('../../common/traverse')
 const rename = require('./rename')
 
 function toStandard(code) {
-	const root = acorn.parse(code, { ecmaVersion: 5 })
+  const root = acorn.parse(code, { ecmaVersion: 5 })
 
-	const target = traverse((node, ctx, next) => {
-		delete node.start
-		delete node.end
-		return next(node)
-	})(root)
+  const target = traverse((node, ctx, next) => {
+    delete node.start
+    delete node.end
+    return next(node)
+  })(root)
 
-	return target
+  return target
 }
 
 test('测试重命名变量', () => {
-	const sourceCode = `
+  const sourceCode = `
 function foo() {
 	foo: while(true) {
 		var foo = {
@@ -26,7 +26,7 @@ function foo() {
 }
 `
 
-	const targetCode = `
+  const targetCode = `
 function bar() {
 	foo: while(true) {
 		var bar = {
@@ -37,7 +37,7 @@ function bar() {
 }
 `;
 
-	const result = rename(sourceCode, 'foo', 'bar');
+  const result = rename(sourceCode, 'foo', 'bar');
 
-	expect(toStandard(result)).toStrictEqual(toStandard(targetCode));
+  expect(toStandard(result)).toStrictEqual(toStandard(targetCode));
 })
