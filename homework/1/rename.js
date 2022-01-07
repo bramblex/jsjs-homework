@@ -5,9 +5,10 @@ const traverse = require('../../common/traverse');
 function transform(root, originName, targetName) {
 	// 遍历所有节点
 	return traverse((node, ctx, next) => {
-		// 所有 Node 的定义 https://github.com/estree/estree/blob/master/es5.md
 
 		// TODO: 作业代码写在这里
+		if (node.type === 'xxx') {
+		}
 
 		// 继续往下遍历
 		return next(node, ctx)
