@@ -1,0 +1,17 @@
+{
+  "name": "jsjs-homework",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/bramblex/jsjs-homework.git",
+  "author": "qiaojian <qiaojian.brambles@bytedance.com>",
+  "license": "MIT",
+  "dependencies": {
+    "acorn": "^8.7.0",
+    "astring": "^1.8.1",
+    "jest": "^27.4.7"
+  },
+  "scripts": {
+    "test": "jest",
+    "test-homework-1": "jest homework/1/rename.test.js"
+  }
+}
