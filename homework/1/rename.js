@@ -7,7 +7,9 @@ function transform(root, originName, targetName) {
   return traverse((node, ctx, next) => {
     // TODO: 作业代码写在这里
     let IdentifierNodes = []
+
     const isIdentifierNode = (node) => Object.keys(node).includes('name')
+
     if (['FunctionDeclaration', 'VariableDeclarator'].includes(node.type)) {
       isIdentifierNode(node.id) && IdentifierNodes.push(node.id)
     } else if (node.type === 'BinaryExpression') {
