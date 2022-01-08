@@ -3,8 +3,8 @@ const astring = require('astring');
 const traverse = require('../../common/traverse');
 
 function transform(root, originName, targetName) {
-	// 遍历所有节点
-	return traverse((node, ctx, next) => {
+  // 遍历所有节点
+  return traverse((node, ctx, next) => {
 
 		// TODO: 作业代码写在这里
 
@@ -36,16 +36,16 @@ function transform(root, originName, targetName) {
 			}
 		}
 
-		// 继续往下遍历
-		return next(node, ctx)
-	})(root);
+    // 继续往下遍历
+    return next(node, ctx)
+  })(root);
 }
 
 function rename(code, originName, targetName) {
-	const ast = acorn.parse(code, {
-		ecmaVersion: 5,
-	})
-	return astring.generate(transform(ast, originName, targetName))
+  const ast = acorn.parse(code, {
+    ecmaVersion: 5,
+  })
+  return astring.generate(transform(ast, originName, targetName))
 }
 
 module.exports = rename
