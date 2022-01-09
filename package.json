@@ -8,7 +8,8 @@
   "dependencies": {
     "acorn": "^8.7.0",
     "astring": "^1.8.1",
-    "jest": "^27.4.7"
+    "jest": "^27.4.7",
+    "yarn": "^1.22.17"
   },
   "scripts": {
     "test": "jest",

@@ -7,8 +7,17 @@ function transform(root, originName, targetName) {
   return traverse((node, ctx, next) => {
 
     // TODO: 作业代码写在这里
-    if (node.type === 'xxx') {
+    const directRenameList = ['FunctionDeclaration', 'VariableDeclarator', 'BinaryExpression'];
+    let shouldRename = false;
+    if (node.type === 'Identifier' && node.name === originName && (directRenameList.includes(ctx?.type) || (ctx?.type === 'MemberExpression' && ctx?.object === node))) {
+      shouldRename = true;
     }
+
+    if(shouldRename){
+      node.name = targetName;
+    }
+    
+    ctx = node;
 
     // 继续往下遍历
     return next(node, ctx)
