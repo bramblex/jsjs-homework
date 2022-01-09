@@ -7,14 +7,44 @@ function transform(root, originName, targetName) {
     return traverse((node, ctx, next) => {
 
         // TODO: 作业代码写在这里
-        if (node.type === 'FunctionDeclaration' && node.id.name === originName) {
-            node.id.name = targetName
-        } else if (node.type === 'VariableDeclarator' && node.id.name === originName) {
-            node.id.name = targetName;
-        } else if (node.type === 'MemberExpression' && node.object.name === originName) {
-            node.object.name = targetName;
-        } else if (node.type === 'BinaryExpression') {
-            traverse((node, ctx, next) => {
+        const isNode = target =>
+            target && typeof target.type === 'string';
+
+        const isNodeArray = target =>
+            Array.isArray(target) && target[0] && isNode(target[0]);
+
+        const isChildNode = target =>
+            isNodeArray(target) || isNode(target);
+
+        const getChildrenKeys = node =>
+            Object.keys(node).filter(key => isChildNode(node[key]));
+
+        const traverseChildrenExpectProperty = func => (node, ctx) => {
+            if (isNode(node)) {
+                for (const key of getChildrenKeys(node)) {
+                    if (Array.isArray(node[key])) {
+                        for (let i = 0; i < node[key].length; i++) {
+                            node[key][i] = node[key][i] && func(node[key][i], ctx);
+                        }
+                    } else {
+                        if (key === 'property') {
+                            continue
+                        } else {
+                            node[key] = func(node[key], ctx);
+                        }
+                    }
+                }
+            }
+            return node;
+        }
+        const nodeTypeArray = [
+            'FunctionDeclaration',
+            'VariableDeclarator',
+            'MemberExpression',
+            'BinaryExpression'
+        ]
+        if (nodeTypeArray.includes(node.type)) {
+            traverseChildrenExpectProperty((node, ctx) => {
                 if (node.type === 'Identifier' && node.name === originName) {
                     node.name = targetName;
                 }
