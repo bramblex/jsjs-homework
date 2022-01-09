@@ -7,5 +7,5 @@
 
 ## 提示：
 1. 所有的变量名都是 type 为 `Identifier`，但不是所有 `Identifier` 都是变量名；
-2. 所有 Node 的定义 https://github.com/estree/estree/blob/master/es5.md；
-3. 可以将测试用例中的代码复制进 https://astexplorer.net/ 中查看其生成 AST；
+2. 所有 Node 的定义 [https://github.com/estree/estree/blob/master/es5.md](https://github.com/estree/estree/blob/master/es5.md)；
+3. 可以将测试用例中的代码复制进 [https://astexplorer.net/](https://astexplorer.net/) 中查看其生成 AST；
