@@ -2,14 +2,19 @@ const acorn = require('acorn');
 const astring = require('astring');
 const traverse = require('../../common/traverse');
 
+const excludedKeyArr = ['property', 'label', 'key']
+
 function transform(root, originName, targetName) {
   // 遍历所有节点
   return traverse((node, ctx, next) => {
 
     // TODO: 作业代码写在这里
-    if (node.type === 'xxx') {
+    for (const key in node) {
+      if (node[key].type !== 'Identifier' || node[key].name !== originName) continue;
+      if (excludedKeyArr.includes(key)) continue;
+      node[key].name = targetName
     }
-
+    
     // 继续往下遍历
     return next(node, ctx)
   })(root);
