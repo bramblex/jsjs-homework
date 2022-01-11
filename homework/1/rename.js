@@ -7,50 +7,26 @@ function transform(root, originName, targetName) {
     return traverse((node, ctx, next) => {
 
         // TODO: 作业代码写在这里
-        const isNode = target =>
-            target && typeof target.type === 'string';
-
-        const isNodeArray = target =>
-            Array.isArray(target) && target[0] && isNode(target[0]);
-
-        const isChildNode = target =>
-            isNodeArray(target) || isNode(target);
-
-        const getChildrenKeys = node =>
-            Object.keys(node).filter(key => isChildNode(node[key]));
-
-        const traverseChildrenExpectProperty = func => (node, ctx) => {
-            if (isNode(node)) {
-                for (const key of getChildrenKeys(node)) {
-                    if (Array.isArray(node[key])) {
-                        for (let i = 0; i < node[key].length; i++) {
-                            node[key][i] = node[key][i] && func(node[key][i], ctx);
-                        }
-                    } else {
-                        if (key === 'property') {
-                            continue
-                        } else {
-                            node[key] = func(node[key], ctx);
-                        }
-                    }
-                }
-            }
-            return node;
-        }
         const nodeTypeArray = [
             'FunctionDeclaration',
             'VariableDeclarator',
             'MemberExpression',
             'BinaryExpression'
         ]
+        const keyTypeArray = [
+            'property',
+            'label',
+            'key'
+        ]
         if (nodeTypeArray.includes(node.type)) {
-            traverseChildrenExpectProperty((node, ctx) => {
-                if (node.type === 'Identifier' && node.name === originName) {
-                    node.name = targetName;
+            for (const key in node) {
+                if (keyTypeArray.includes(key)) continue
+                if (node[key].type === 'Identifier' && node[key].name === originName) {
+                    node[key].name = targetName;
                 }
-                return next(node, ctx)
-            })(node)
+            }
         }
+
         // 继续往下遍历
         return next(node, ctx)
     })(root);
