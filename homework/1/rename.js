@@ -12,32 +12,27 @@ function transform(root, originName, targetName) {
   // 遍历所有节点
   return traverse((node, ctx, next) => {
 
-    switch (node.type) {
-      // function bar()
-      case FunctionDeclaration:
-      // var bar
-      case VariableDeclarator:
-        console.log(node.type)
-        if (node.id.name === originName) {
-          node.id.name = targetName;
-        }
-        break;
-      // { foo: bar }
-      case MemberExpression:
-        if (node.object.type === Identifier && node.object.name === originName) {
-          node.object.name = targetName;
-        }
-        break;
-      // bar + bar
-      case BinaryExpression:
-        if (node.left.name === originName) {
-          node.left.name = targetName;
-        }
-        if (node.right.name === originName) {
-          node.right.name = targetName;
-        }
-        break;
+    if (node.type === Identifier) {
+      let rename = false;
+      console.log(ctx)
+      switch (ctx.type) {
+        case MemberExpression:
+          if (ctx.object === node) {
+            rename = true;
+          }
+          break;
+        case BinaryExpression:
+        case FunctionDeclaration:
+        case VariableDeclarator:
+          rename = true;
+          break;
+      }
+
+      if (rename && node.name === originName) {
+        node.name = targetName;
+      }
     }
+    ctx = node
     // 继续往下遍历
     return next(node, ctx)
   })(root);
