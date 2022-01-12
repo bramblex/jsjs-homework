@@ -6,10 +6,23 @@ function transform(root, originName, targetName) {
   // 遍历所有节点
   return traverse((node, ctx, next) => {
 
-    // TODO: 作业代码写在这里
-    if (node.type === 'xxx') {
+    if (node.type === 'FunctionDeclaration' && node.id.name === originName) {
+      node.id.name = targetName
     }
-
+    if (node.type === 'VariableDeclarator' && node.id.name === originName) {
+      node.id.name = targetName
+    }
+    if (node.type === 'MemberExpression' && node.object.type === 'Identifier' && node.object.name === originName) {
+      node.object.name = targetName
+    }
+    if (node.type === 'BinaryExpression') {
+      if (node.left.name === originName) {
+        node.left.name = targetName
+      }
+      if (node.right.name === originName) {
+        node.right.name = targetName
+      }
+    }
     // 继续往下遍历
     return next(node, ctx)
   })(root);
