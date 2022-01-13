@@ -14,7 +14,6 @@ function transform(root, originName, targetName) {
 
     if (node.type === Identifier) {
       let rename = false;
-      console.log(ctx)
       switch (ctx.type) {
         case MemberExpression:
           if (ctx.object === node) {
