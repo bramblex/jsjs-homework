@@ -16,7 +16,7 @@ test('测试表达式 - 初级挑战', () => {
     '{ a: 1 + 2 + 3, b: 4 + 5, c: [1, 2, 3] }',
   ];
   for (sourceCode of sourceCodeList) {
-    expect(customerEval(sourceCode, baseEnv)).toStrictEqual(eval(sourceCode));
+    expect(customerEval(sourceCode, baseEnv)).toStrictEqual(eval(`(${sourceCode})`));
   }
 })
 
