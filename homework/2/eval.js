@@ -8,8 +8,29 @@ function evaluate(
   switch (node.type) {
     case "Literal":
       return node.value;
-    case "Identifier":
-      return env[node.name];
+    case "Identifier": {
+      let currentEnv = env;
+      while (currentEnv) {
+        if (currentEnv.hasOwnProperty(node.name)) {
+          return currentEnv[node.name];
+        } else {
+          currentEnv = currentEnv.__outer__;
+        }
+      }
+      return void 0;
+    }
+    case "AssignmentExpression": {
+      let currentEnv = env;
+      while (currentEnv) {
+        if (currentEnv.hasOwnProperty(node.left.name)) {
+          const newValue = evaluate(node.right, env);
+          return currentEnv[node.left.name] = newValue;
+        } else {
+          currentEnv = currentEnv.__outer__;
+        }
+      }
+      return;
+    }
     case "ObjectExpression":
       return Object.fromEntries(
         Object.values(node.properties).map((property) => {
@@ -44,7 +65,9 @@ function evaluate(
     case "ArrowFunctionExpression": {
       return (...args) => {
         const fnEnv = {
-          ...env,
+          // ...env,
+          // scope chain
+          __outer__: env,
           // override
           ...Object.fromEntries(
             node.params.map((p, i) => {
@@ -61,6 +84,8 @@ function evaluate(
         env
       )(...node.arguments.map((arg) => evaluate(arg, env)));
     }
+    case "SequenceExpression":
+      return node.expressions.reduce((_, exp) => evaluate(exp, env), undefined);
   }
 
   throw new Error(
