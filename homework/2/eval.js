@@ -209,7 +209,7 @@ function evaluate(node, env) {
   }
 }
 
-function evals(code, env = {}) {
+function customerEval(code, env = {}) {
   const node = acorn.parseExpressionAt(code, 0, {
     ecmaVersion: 6,
   });
@@ -249,4 +249,4 @@ function evals(code, env = {}) {
 // console.log((n => ((x => n = x)(n + 2), (y => n + y)(3)))(1));
 // console.log(evals('(n => ((x => n = x)(n + 2), (y => n + y)(3)))(1)'));
 
-module.exports = evals;
+module.exports = customerEval
