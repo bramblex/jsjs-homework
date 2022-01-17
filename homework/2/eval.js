@@ -1,7 +1,6 @@
 const acorn = require('acorn');
 
 function evaluate(node, env) {
-  // console.log(node, env)
   switch (node.type) {
     case 'Literal':
       // TODO: 补全作业代码
@@ -53,13 +52,11 @@ function evaluate(node, env) {
         case 'in': return left in right
         // instanceof 未能实现
         // case 'instanceof':
-        //   console.log(node)
         //   return left instanceof right
       }
     }
     // enum UnaryOperator {"-" | "+" | "!" | "~" | "typeof" | "void" | "delete"}
     case 'UnaryExpression': {
-      console.log(node)
       switch (node.operator) {
         case '-': return -evaluate(node.argument, env)
         case '+': return +evaluate(node.argument, env)
@@ -105,7 +102,6 @@ function evaluate(node, env) {
 
 
   }
-  // console.log(node)
   throw new Error(`Unsupported Syntax ${node.type} at Location ${node.start}:${node.end}`);
 }
 
