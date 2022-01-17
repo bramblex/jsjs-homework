@@ -16,11 +16,6 @@ function evaluate(node, env) {
       )
     case 'ArrayExpression':
       return node.elements.map((element) => evaluate(element, env))
-    case 'CallExpression':
-      return evaluate(
-        node.callee,
-        env
-      )(node.arguments.map((arg) => evaluate(arg, env)))
     case 'BinaryExpression':
       left = evaluate(node.left, env)
       right = evaluate(node.right, env)
@@ -35,6 +30,16 @@ function evaluate(node, env) {
           return left / right
         case '%':
           return left % right
+        case '<':
+          return left < right
+        case '>':
+          return left > right
+        case '<=':
+          return left <= right
+        case '>=':
+          return left >= right
+        case '==':
+          return left == right
       }
     case 'LogicalExpression':
       left = evaluate(node.left, env)
@@ -59,6 +64,31 @@ function evaluate(node, env) {
       } else {
         return evaluate(node.alternate, env)
       }
+    case 'AssignmentExpression':
+      return (env[node.left.name] = evaluate(node.right, env))
+    case 'CallExpression':
+      return evaluate(
+        node.callee,
+        env
+      )(...node.arguments.map((arg) => evaluate(arg, env)))
+    case 'ArrowFunctionExpression':
+      return function (...args) {
+        return evaluate(node.body, {
+          ...env,
+          ...Object.assign(
+            {},
+            ...node.params.map((param, index) => ({
+              [param.name]: args[index],
+            }))
+          ),
+        })
+      }
+    case 'SequenceExpression':
+      let res
+      node.expressions.forEach((expression) => {
+        res = evaluate(expression, env)
+      })
+      return res
   }
 
   throw new Error(
@@ -72,7 +102,5 @@ function customerEval(code, env = {}) {
   })
   return evaluate(node, env)
 }
-
-console.log(customerEval('true || new Error()'))
 
 module.exports = customerEval
