@@ -1,7 +1,6 @@
 const acorn = require('acorn');
 const traverse = require('../../common/traverse')
 const rename = require('./rename')
-const sourceCode = require('./sourceCode')
 
 function toStandard(code) {
   const root = acorn.parse(code, { ecmaVersion: 5 })

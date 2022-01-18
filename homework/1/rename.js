@@ -5,16 +5,21 @@ const traverse = require('../../common/traverse');
 function transform(root, originName, targetName) {
   // 遍历所有节点
   return traverse((node, ctx, next) => {
-    switch(node.type) {
+    switch(node.type) 
+    {
       case 'VariableDeclaration':
-        let variableDeclarator = node.type.declarations[0];
-        if (variableDeclarator.name === originName) {
-          variableDeclarator.name = targetName;
+        {
+          let variableDeclarator = node.declarations[0];
+          if (variableDeclarator.id.name === originName) {
+            variableDeclarator.id.name = targetName;
+          }
         }
         break;
       case 'FunctionDeclaration':
-        if (node.id.name === originName) {
-          node.id.name = targetName;
+        {
+          if (node.id.name === originName) {
+            node.id.name = targetName;
+          }
         }
         break;
       // case 'ObjectExpression':
@@ -23,16 +28,20 @@ function transform(root, originName, targetName) {
       //   }
       //   break;
       case 'BinaryExpression':
-        if (node.left.name === originName) {
-          node.left.name = targetName;
-        }
-        else if (node.right.name === originName) {
-          node.right.name = targetName;
+        {
+          if (node.left.name === originName) {
+            node.left.name = targetName;
+          }
+          if (node.right.name === originName) {
+            node.right.name = targetName;
+          }
         }
         break;
-      case 'MemberExpression' && !node.object.object:
-        if (node.object.name === originName) {
-          node.object.name === targetName;
+      case 'MemberExpression':
+        {
+          if (!node.object.object && node.object.name === originName) {
+            node.object.name = targetName;
+          }
         }
         break;
     }
@@ -41,7 +50,7 @@ function transform(root, originName, targetName) {
 }
 
 function rename(code, originName, targetName) {
-  const ast = acorn.parse(code, { 
+  const ast = acorn.parse(code, {
     ecmaVersion: 5,
   })
   return astring.generate(transform(ast, originName, targetName))
