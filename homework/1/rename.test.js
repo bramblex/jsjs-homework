@@ -1,6 +1,7 @@
 const acorn = require('acorn');
 const traverse = require('../../common/traverse')
 const rename = require('./rename')
+const sourceCode = require('./sourceCode')
 
 function toStandard(code) {
   const root = acorn.parse(code, { ecmaVersion: 5 })
@@ -14,30 +15,5 @@ function toStandard(code) {
   return target
 }
 
-test('测试重命名变量', () => {
-  const sourceCode = `
-function foo() {
-	foo: while(true) {
-		var foo = {
-			foo: foo.foo.foo[foo + foo]
-		};
-		break foo;
-	}
-}
-`
-
-  const targetCode = `
-function bar() {
-	foo: while(true) {
-		var bar = {
-			foo: bar.foo.foo[bar + bar]
-		};
-		break foo;
-	}
-}
-`;
-
-  const result = rename(sourceCode, 'foo', 'bar');
-
-  expect(toStandard(result)).toStrictEqual(toStandard(targetCode));
-})
+const res = rename(sourceCode, 'foo', 'bar');
+console.log(res);
