@@ -1,5 +1,10 @@
 const acorn = require('acorn');
 
+// 查找某变量所在的父级环境
+function findEnv(name, env) {
+  return env[name] ? env : env.fa && findEnv(name, env.fa);
+}
+
 function evaluate(node, env) {
   switch (node.type) {
     // TODO: 补全作业代码
@@ -7,7 +12,7 @@ function evaluate(node, env) {
     case 'Literal':
       return node.value;
     case 'Identifier':
-      return env[node.name];
+      return findEnv(node.name, env)[node.name];
     // 数组，对象
     case 'ArrayExpression':
       return node.elements.map(e => evaluate(e, env));
@@ -37,29 +42,30 @@ function evaluate(node, env) {
     // 大概是要先去父级作用域查询，查询不到时再在本作用域新建这个变量？
     case 'UpdateExpression': 
       let value = evaluate(node.argument, env);
-      if (node.prefix) {a
+      if (node.prefix) {
         return node.operator === '++' ? ++value : --value;
       } else {
         return node.operator === '++' ? value++ : value--;
       }
     case 'AssignmentExpression':
-      return env[node.left.name] = evaluate(node.right, env);
+      let protoEnv = findEnv(node.left.name, env);
+      return protoEnv ? protoEnv[node.left.name] = evaluate(node.right, env) : env[node.left.name] = evaluate(node.right, env);
     // 逗号都要算一遍，只返回最后一个值
     case 'SequenceExpression':
       return node.expressions.reduce((_, expression) => 
-      evaluate(expression, env), undefined);
+        evaluate(expression, env), undefined);
     // 函数及作用域相关
     case 'FunctionExpression':
       return function (...args) {
         return evaluate(node.body, {
-          ...env,
+          fa: env,
           ...node.params.reduce((params, param, index) => ({...params, [param.name]: args[index]}), {}),
         });
       };
     case 'ArrowFunctionExpression':
       return function (...args) {
         return evaluate(node.body, {
-          ...env,
+          fa: env,
           ...node.params.reduce((params, param, index) => ({...params, [param.name]: args[index]}), {}),
         });
       }
@@ -74,6 +80,7 @@ function customerEval(code, env = {}) {
   const node = acorn.parseExpressionAt(code, 0, {
     ecmaVersion: 6
   })
+  env.fa = null;
   return evaluate(node, env)
 }
 
