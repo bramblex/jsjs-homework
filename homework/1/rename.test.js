@@ -15,5 +15,30 @@ function toStandard(code) {
   return target
 }
 
-const res = rename(sourceCode, 'foo', 'bar');
-console.log(res);
+test('测试重命名变量', () => {
+  const sourceCode = `
+function foo() {
+	foo: while(true) {
+		var foo = {
+			foo: foo.foo.foo[foo + foo]
+		};
+		break foo;
+	}
+}
+`
+
+  const targetCode = `
+function bar() {
+	foo: while(true) {
+		var bar = {
+			foo: bar.foo.foo[bar + bar]
+		};
+		break foo;
+	}
+}
+`;
+
+  const result = rename(sourceCode, 'foo', 'bar');
+
+  expect(toStandard(result)).toStrictEqual(toStandard(targetCode));
+})
