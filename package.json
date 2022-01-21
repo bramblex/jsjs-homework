@@ -13,6 +13,7 @@
   "scripts": {
     "test": "jest",
     "test-homework-1": "jest homework/1/rename.test.js",
-    "test-homework-2": "jest homework/2/eval.test.js"
+    "test-homework-2": "jest homework/2/eval.test.js",  
+    "test-homework-3": "jest homework/3/eval.test.js"
   }
 }
