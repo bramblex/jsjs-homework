@@ -48,7 +48,7 @@ test('测试声明与控制流 - 终极挑战', () => {
     // add test case
     '(() => { let a = 1; var b = 2; {let a = 2; var b = 3;} return { a, b }; })()',
     'const obj = { runTry: false, runError: false, runFinally: false }; try { obj.runTry = true; } catch (err) { obj.runError = true; } finally { obj.runFinally = true; } obj',
-    'const obj = { runTry: false, runError: false, runFinally: false }; try { obj.runTry = true; throw new Error(233);} catch (err) { obj.runError = true; } finally { obj.runFinally = true; }',
+    'const obj = { runTry: false, runError: false, runFinally: false }; try { obj.runTry = true; throw new Error(233);} catch (err) { obj.runError = err; } finally { obj.runFinally = true; } obj',
   ]
   for (sourceCode of sourceCodeList) {
     expect(safeCustomEval(sourceCode, baseEnv)).toStrictEqual(safeEval(sourceCode));
