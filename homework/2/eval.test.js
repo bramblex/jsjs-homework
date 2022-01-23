@@ -26,7 +26,7 @@ test('测试表达式 - 终极挑战', () => {
   expect(customerEval(sourceCode)).toStrictEqual(eval(sourceCode));
 })
 
-// test('测试表达式 - 超纲挑战(下节课会讲)', () => {
-//   const sourceCode = '(n => ((x => n = x)(n + 2), (y => n + y)(3)))(1)'
-//   expect(customerEval(sourceCode)).toStrictEqual(eval(sourceCode));
-// })
+test('测试表达式 - 超纲挑战(下节课会讲)', () => {
+  const sourceCode = '(n => ((x => n = x)(n + 2), (y => n + y)(3)))(1)'
+  expect(customerEval(sourceCode)).toStrictEqual(eval(sourceCode));
+})

@@ -4,8 +4,16 @@ function evaluate(node, env) {
   switch (node.type) {
     case 'Literal':
       return node.value;
-    case 'Identifier':
-      return env[node.name];
+    case 'Identifier': {
+      let currentEnv = env;
+      while(currentEnv) {
+        if(currentEnv.hasOwnProperty(node.name)){
+          return currentEnv[node.name];
+        } else {
+          currentEnv = env.parent;
+        }
+      }
+    }
     case 'BinaryExpression':
       switch (node.operator) {
         case '+':
@@ -42,15 +50,24 @@ function evaluate(node, env) {
       return node.elements.map(element => evaluate(element, env));
     case 'ArrowFunctionExpression':
       return (...args) => {
-        return evaluate(node.body, {
-          ...env,
+        const newEnv = {
+          parent: env,
           ...node.params.reduce((prev, param, index) => ({...prev, [param.name]: args[index]}), {})
-        });
+        }
+        return evaluate(node.body, newEnv);
       };
-    case 'AssignmentExpression':
-      let left = evaluate(node.left, env);
-      const right = evaluate(node.right, env);
-      return left = right;
+    case 'AssignmentExpression': {
+      let currentEnv = env;
+      while(currentEnv){
+        if(currentEnv.hasOwnProperty(node.left.name)) {
+          return currentEnv[node.left.name] = evaluate(node.right, env);
+        } else {
+          currentEnv = env.parent;
+        }
+      }
+    }
+    case 'SequenceExpression':
+      return node.expressions.reduce((_, exp) => evaluate(exp, env), undefined);
   }
 
   throw new Error(`Unsupported Syntax ${node.type} at Location ${node.start}:${node.end}`);
