@@ -16,4 +16,7 @@ clone 本项目后根据 homework 目录下的 README.md 文件查看具体要�
 ![image](https://user-images.githubusercontent.com/40495740/148645109-545c963b-ce1d-40f7-9619-82d561f602d4.png)
 选择你要提交的分支，并根据提示完成
 ![image](https://user-images.githubusercontent.com/40495740/148645136-aebd6487-dffe-4fbc-99c4-733a632fae99.png)
-4. 提交后等待 code review 就好了
+
+4. 进入 issue 中找到对应的作业提交安装模板提交作业
+
+5. 提交后等待 code review 就好了
