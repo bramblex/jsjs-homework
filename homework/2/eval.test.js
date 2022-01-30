@@ -5,7 +5,6 @@ function throwError() {
 }
 
 const baseEnv = { throwError }
-
 test('测试表达式 - 初级挑战', () => {
   const sourceCodeList = [
     '1 - 2 + 3 * 10 / 5',

@@ -38,6 +38,5 @@ function bar() {
 `;
 
   const result = rename(sourceCode, 'foo', 'bar');
-
   expect(toStandard(result)).toStrictEqual(toStandard(targetCode));
 })
