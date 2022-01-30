@@ -22,6 +22,9 @@ class VirtualMachine {
 
 	// 调用栈
 	private stack: StackFrame = [];
+  
+  // 代码
+  private rom: Command[];
 
 	// 复位，清空当前虚拟机所有状态
 	private reset() {
@@ -31,6 +34,7 @@ class VirtualMachine {
 		this.pc = 0;
 		this.top = 0;
 		this.stack = [bottom];
+    this.rom = [];
 	}
 
 	// 执行一个指令
@@ -79,6 +83,7 @@ interface StackFrame {
 | get        | 3, [r] [r] [r]                         | 获取对象的属性，转移到第三个寄存器                           |
 | set        | 3, [r] [r] [r]                         | 对象赋值                                                     |
 | load       | 2, [r] [r] [literal]                   | 将字面量读取至寄存器。load #r0 123，值将 123 这个值 load 进 r0 寄存器中。 |
+| var        | 1, [name]                              | 在作用域声明变量                                             |
 | branch     | 1, [r]                                 | 根据寄存器中的数据跳转的指令。branch #r0，意思是如果 r0 寄存器的值是 true 则执行下一条指令，否则不执行下一条而继续执行下下条指令。 |
 | jump       | 2, [lecture]                           | 根据寄存器中 r 的值调转到对应的指令进行执行。                |
 | func       | 2, [lecture]                           | 创建函数对象，打入闭包                                       |
