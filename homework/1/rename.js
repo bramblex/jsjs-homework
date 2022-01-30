@@ -7,9 +7,12 @@ function transform(root, originName, targetName) {
   return traverse((node, ctx, next) => {
 
     // TODO: 作业代码写在这里
-    if (node.type === 'xxx') {
+    for (const key in node) {
+      if (node[key].type !== 'Identifier' || node[key].name !== originName) continue;
+      if (['property', 'label', 'key'].includes(key)) continue;
+      node[key].name = targetName
     }
-
+    
     // 继续往下遍历
     return next(node, ctx)
   })(root);
