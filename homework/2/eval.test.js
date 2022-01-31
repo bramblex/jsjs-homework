@@ -27,4 +27,13 @@ test("测试表达式 - 终极挑战", () => {
   // console.log(customerEval("((a,b)=>((a)=>a+b)(b))(1,2)"));
   // console.log(customerEval(sourceCode));
   expect(customerEval(sourceCode)).toStrictEqual(eval(sourceCode));
+<<<<<<< HEAD
 });
+=======
+})
+
+test('测试表达式 - 超纲挑战(下节课会讲)', () => {
+  const sourceCode = '(n => ((x => n = x)(n + 2), (y => n + y)(3)))(1)'
+  expect(customerEval(sourceCode)).toStrictEqual(eval(sourceCode));
+})
+>>>>>>> fc15843d6025c15941ceb1066b40ea444a4cce2e
