@@ -5,7 +5,9 @@ const Signal = require("./signal");
 function evaluate(node, scope) {
   switch (node.type) {
     case "Program": {
-      for (const child of node.body) return evaluate(child, scope);
+      let res;
+      for (const child of node.body) res = evaluate(child, scope);
+      return res;
     }
 
     case "Literal": {
