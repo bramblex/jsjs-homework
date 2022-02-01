@@ -10,7 +10,7 @@ function evaluate(node, scope) {
       // TODO: 补全作业代码
       return node.value;
     case 'Identifier': {
-      return scope[node.name] || global[node.name];
+      return scope.get(node.name);
     }
     // case 'FunctionDeclaration': {
     //   scope.declare
@@ -18,28 +18,95 @@ function evaluate(node, scope) {
     case 'ExpressionStatement': {
       return evaluate(node.expression, scope)
     }
+    /**
+     * 
+      enum AssignmentOperator {
+        "=" | "+=" | "-=" | "*=" | "/=" | "%="
+            | "<<=" | ">>=" | ">>>="
+            | "|=" | "^=" | "&="
+      }
+     */
     case 'AssignmentExpression': {
-      return scope.set(node.left.name, evaluate(node.right))
+      // 等式右边的取值
+      let leftValue = evaluate(node.left, scope)
+      let rightValue = evaluate(node.right, scope)
+      // 为对象的属性值赋值 例如obj.a.b = value,暂未实现夹带[]和类似fn()[1]()[2]的语法
+      if (node.left.type === 'MemberExpression') {
+        let n = node.left
+        let propList = []
+        while (!n.object.name) {
+          propList.push(n.property.name)
+          n = n.object
+        }
+        propList.push(n.property.name)
+        let obj = scope.get(n.object.name)
+        while (propList.length > 1) {
+          let pname = propList.pop()
+          obj = obj[pname]
+        }
+        switch (node.operator) {
+          case '=': obj[propList.pop()] = rightValue; break;
+          case '+=': obj[propList.pop()] = leftValue + rightValue; break;
+          case '-=': obj[propList.pop()] = leftValue - rightValue; break;
+          case '/=': obj[propList.pop()] = leftValue / rightValue; break;
+          case '*=': obj[propList.pop()] = leftValue * rightValue; break;
+          case '%=': obj[propList.pop()] = leftValue % rightValue; break;
+          case '<<=': obj[propList.pop()] = leftValue << rightValue; break;
+          case '>>=': obj[propList.pop()] = leftValue >> rightValue; break;
+          case '>>>=': obj[propList.pop()] = leftValue >>> rightValue; break;
+          case '|=': obj[propList.pop()] = leftValue | rightValue; break;
+          case '^=': obj[propList.pop()] = leftValue ^ rightValue; break;
+          case '&=': obj[propList.pop()] = leftValue & rightValue; break;
+        }
+
+      } else if (node.left.type === 'Identifier') {
+        switch (node.operator) {
+          case '=': scope.set(node.left.name, rightValue); break;
+          case '+=': scope.set(node.left.name, leftValue + rightValue); break;
+          case '-=': scope.set(node.left.name, leftValue - rightValue); break;
+          case '/=': scope.set(node.left.name, leftValue / rightValue); break;
+          case '*=': scope.set(node.left.name, leftValue * rightValue); break;
+          case '%=': scope.set(node.left.name, leftValue % rightValue); break;
+          case '<<=': scope.set(node.left.name, leftValue << rightValue); break;
+          case '>>=': scope.set(node.left.name, leftValue >> rightValue); break;
+          case '>>>=': scope.set(node.left.name, leftValue >>> rightValue); break;
+          case '|=': scope.set(node.left.name, leftValue | rightValue); break;
+          case '^=': scope.set(node.left.name, leftValue ^ rightValue); break;
+          case '&=': scope.set(node.left.name, leftValue & rightValue); break;
+        }
+      }
+      return rightValue
     }
     case 'BlockStatement': {
       const childScope = new Scope("Block", scope)
-      for (const state of node.body) {
-        evaluate(node, childScope)
+      let ret
+      for (const expression of node.body) {
+        ret = evaluate(expression, childScope)
       }
+      if (ret && ret.kind === 'return') return ret.value;
+      if (ret && ret.kind === 'break') return ret;
+      if (ret && ret.kind === 'continue') return;
+      return ret
     }
     case 'VariableDeclaration': {
       return node.declarations.forEach(v => scope.declare(node.kind, v.id.name, evaluate(v.init, scope)))
     }
     case 'IfStatement': {
-      if (node.test) return evaluate(node.consequent, scope)
+      return evaluate(node.test, scope) ? evaluate(node.consequent, scope) : evaluate(node.alternate, scope)
     }
     case 'WhileStatement': {
-      while (node.test) {
-        evaluate(node.body)
+      while (evaluate(node.test, scope)) {
+        evaluate(node.body, scope)
       }
-    } break
+      return
+    }
     case 'ForStatement': {
-
+      let ret
+      const forScope = new Scope('block', scope)
+      for (evaluate(node.init, forScope); evaluate(node.test, forScope); evaluate(node.update, forScope)) {
+        ret = evaluate(node.body, forScope)
+      }
+      return ret
     }
     // 逻辑运算符
     case 'LogicalExpression': {
@@ -98,6 +165,17 @@ function evaluate(node, scope) {
           Array
       }
     }
+    case 'UpdateExpression': {
+      let value = evaluate(node.argument, scope)
+      if (node.operator === '++') {
+        scope.set(node.argument.name, value + 1)
+        return node.prefix ? (value + 1) : value
+      } else {
+        scope.set(node.argument.name, value - 1)
+        return node.prefix ? (value - 1) : value
+      }
+
+    }
     // 三目运算符
     case 'ConditionalExpression':
       return evaluate(node.test, scope) ? evaluate(node.consequent, scope) : evaluate(node.alternate, scope)
@@ -111,7 +189,11 @@ function evaluate(node, scope) {
         });
         return obj
       }
-
+    case 'MemberExpression': {
+      let obj = node.object.name ? scope.get(node.object.name) : evaluate(node.object, scope)
+      let pname = node.property.name
+      return obj[pname]
+    }
     // 数组
     case 'ArrayExpression': {
       return node.elements.map(e => e.value) || []
@@ -122,21 +204,24 @@ function evaluate(node, scope) {
     }
     case 'ArrowFunctionExpression': {
       return function (...args) {
-        const argsEnv = {};
+        const childScope = new Scope('function', scope)
         node.params.forEach((param, i) => {
-          argsEnv[param.name] = args[i]
+          childScope.declare('let', param.name, args[i])
         })
-        return evaluate(node.body, { ...scope, ...argsEnv });
+        return evaluate(node.body, childScope);
       }
     }
 
+    case 'EmptyStatement': return
+    case 'ReturnStatement': {
+      return { kind: 'return', value: evaluate(node.argument, scope) }
+    }
 
   }
-  console.log(node)
   throw new Error(`Unsupported Syntax ${node.type} at Location ${node.start}:${node.end}`);
 }
 
-function customerEval(code, env = new Scope()) {
+function customerEval(code, env = new Scope('block')) {
   const node = acorn.parse(code, {
     ecmaVersion: 2020
   })

@@ -39,14 +39,16 @@ class Scope {
         }
     }
     get(name) {
-        if (this.variables[name]) { return this.variables[name].value }
+        if (this.variables[name]) {
+            return this.variables[name].value
+        }
         else if (this.parent) { return this.parent.get(name) }
         else if (global[name]) { return global[name] }
         throw new ReferenceError(`${name} is not defined`)
     }
     set(name, value) {
         if (this.variables[name]) { this.variables[name].set(value) }
-        else if (this.parent[name]) { this.parent.set(name, value) }
+        else if (this.parent) { this.parent.set(name, value) }
     }
 }
 module.exports = Scope
