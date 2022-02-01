@@ -38,6 +38,20 @@ function evaluate(node, scope) {
       return func.apply(obj, args);
     }
 
+    case "FunctionExpression": {
+      return function (...args) {
+        const newScope = new Scope("function", scope);
+
+        // 在新作用域中声明参数
+        for (let i = 0; i < node.params.length; i++) {
+          const { name } = node.params[i];
+          newScope.declare("let", name, args[i]);
+        }
+
+        return evaluate(node.body, newScope);
+      };
+    }
+
     case "ArrowFunctionExpression": {
       return function (...args) {
         const newScope = new Scope("function", scope);
@@ -54,15 +68,15 @@ function evaluate(node, scope) {
 
     case "BlockStatement": {
       const newScope = new Scope("block", scope);
-      
+
       let res;
       for (let i = 0; i < node.body.length; i++) {
         res = evaluate(node.body[i], newScope);
         if (Signal.isReturn(res)) return res.value;
         if (Signal.isBreak(res)) return res;
-        if (Signal.isContinue(res)) return;
+        if (Signal.isContinue(res)) return res;
       }
-      
+
       return res;
     }
 
@@ -84,6 +98,34 @@ function evaluate(node, scope) {
         return evaluate(node.consequent, scope);
       } else if (node.alternate) {
         return evaluate(node.alternate, scope);
+      }
+    }
+
+    case "SwitchStatement": {
+      const { cases } = node;
+      const discriminant = evaluate(node.discriminant, scope);
+      const newScope = new Scope('switch', scope);
+      let isMatch = false;
+
+      for (const _case of cases) {
+        if (!_case.test || discriminant === evaluate(_case.test, newScope)) {
+          isMatch = true;
+        }
+
+        if (isMatch) {
+          const res = evaluate(_case, newScope);
+
+          if (Signal.isBreak(res)) break;
+          if (Signal.isContinue(res) || Signal.isReturn(res)) return res;
+        }
+      }
+    }
+    
+    case "SwitchCase": {
+      for (const stmt of node.consequent) {
+        const res = evaluate(stmt, scope);
+          if (Signal.isReturn(res)) return res.value;
+          if (Signal.isContinue(res) || Signal.isReturn(res)) return res;
       }
     }
 
@@ -149,7 +191,10 @@ function evaluate(node, scope) {
     }
 
     case "ReturnStatement": {
-      return new Signal("return", node.argument ? evaluate(node.argument, scope) : undefined);
+      return new Signal(
+        "return",
+        node.argument ? evaluate(node.argument, scope) : undefined
+      );
     }
 
     case "SequenceExpression": {
@@ -172,11 +217,27 @@ function evaluate(node, scope) {
 
     case "AssignmentExpression": {
       const value = evaluate(node.right, scope);
-      const name = node.left.name;
+      // 对象 or 标识符
+      let name,
+        isMember = false,
+        obj,
+        property;
+
+      if (node.left.type === "Identifier") {
+        name = node.left.name;
+      } else {
+        // MemberExpression
+        const { left } = node;
+        obj = evaluate(left.object, scope);
+        property = left.computed
+          ? evaluate(left.property, scope)
+          : node.left.property.name;
+        isMember = true;
+      }
 
       switch (node.operator) {
         case "=": {
-          scope.set(name, value);
+          isMember ? (obj[property] = value) : scope.set(name, value);
           return;
         }
 
@@ -185,7 +246,7 @@ function evaluate(node, scope) {
           scope.set(name, pre + value);
           return;
         }
-        
+
         case "*=": {
           let pre = scope.get(name).value;
           scope.set(name, pre * value);
@@ -194,11 +255,24 @@ function evaluate(node, scope) {
       }
     }
 
+    case "ArrayExpression": {
+      return node.elements.map(ele => evaluate(ele, scope));
+    }
+
+    case "MemberExpression": {
+      const { object, property, computed } = node
+      if (computed) {
+          return evaluate(object, scope)[evaluate(property, scope)]
+      } else {
+          return evaluate(object, scope)[property.name]
+      }
+    }
+
     case "ForStatement": {
       let res;
       for (
         const newScope = new Scope("loop", scope),
-        init = node.init ? evaluate(node.init, newScope) : null;
+          init = node.init ? evaluate(node.init, newScope) : null;
         evaluate(node.test, newScope);
         evaluate(node.update, newScope)
       ) {
@@ -214,7 +288,7 @@ function evaluate(node, scope) {
     case "WhileStatement": {
       let res;
 
-      while(evaluate(node.test, scope)) {
+      while (evaluate(node.test, scope)) {
         const newScope = new Scope("loop", scope);
         res = evaluate(node.body, newScope);
 
@@ -242,6 +316,61 @@ function evaluate(node, scope) {
           return prefix ? --value : value--;
         }
       }
+    }
+
+    case "ObjectExpression": {
+      const obj = {};
+
+      node.properties.forEach((property) => {
+        let key;
+
+        if (property.key.type === "Literal") {
+          // 字面量
+          key = evaluate(property.key, scope);
+        } else {
+          // 标识符 Identifier
+          key = property.key.name;
+        }
+
+        const value = evaluate(property.value, scope);
+
+        if (property.kind === "init") {
+          obj[key] = evaluate(property.value, scope);
+        } else if (property.kind === "get") {
+          Object.defineProperty(obj, key, { get: value });
+        } else {
+          Object.defineProperty(obj, key, { set: value });
+        }
+      });
+
+      return obj;
+    }
+
+    case "TryStatement": {
+      try {
+        return evaluate(node.block, scope);
+      } catch (err) {
+        if (node.handler) {
+          // 处理参数
+          const { name } = node.handler.param;
+          const newScope = new Scope("block", scope);
+          newScope.declare("let", name, err);
+
+          return evaluate(node.handler, newScope);
+        } else {
+          throw err;
+        }
+      } finally {
+        if (node.finalizer) evaluate(node.finalizer, scope);
+      }
+    }
+
+    case "ThrowStatement": {
+      throw evaluate(node.argument, scope);
+    }
+
+    case "CatchClause": {
+      return evaluate(node.body, scope);
     }
   }
 
