@@ -7,8 +7,25 @@ function transform(root, originName, targetName) {
   return traverse((node, ctx, next) => {
 
     // TODO: 作业代码写在这里
-    if (node.type === 'xxx') {
+    if (node.type === 'Identifier') {
+
+      switch (ctx.node.type) {
+        case "Property":
+        case "LabeledStatement":
+        case "BreakStatement":
+          break;
+
+        case "MemberExpression":
+          if (ctx.node.object !== node) break;
+        
+        default: {
+          node.name = targetName;
+          break;
+        }
+      }
     }
+
+    ctx = { node };
 
     // 继续往下遍历
     return next(node, ctx)

@@ -9,6 +9,8 @@ const baseEnv = { throwError }
 test('控制流 - 初级挑战', () => {
   const sourceCodeList = [
     '(() => { let a = 3; if (a > 0) { return 1 } else { return 0 } })()',
+    '(n => ((x => n = x)(n + 2), (y => n + y)(3)))(1)',
+    '(f => (x => f (y => x (x) (y))) (x => f (y => x(x)(y))))(f => n => n <= 1 ? n : n * f(n - 1))(10)',
     '(() => { let sum = 0; for (let i = 0; i < 10; i++) { sum += i } return sum })()',
     '(() => { let factorial = 1; let i = 0; while (i < 10) { factorial *= i; i++; } return factorial })()',
   ]
@@ -60,8 +62,8 @@ test('测试声明与控制流 - 终极挑战', () => {
   }
 })
 
-test('测试声明与控制流 - 超纲挑战', () => {
-  const sourceCode =
-    '(() => { loop1: for (var i = 0; i < 3; i++) { loop2: for (var m = 1; m < 3; m++) { if (m % 2 === 0) { break loop1; } loop3: for (var y = 1; y < 10; y++) { if (y % 5 === 0) { continue loop2; } } } } return { i, m, y } })()'
-  expect(customerEval(sourceCode)).toStrictEqual(eval(sourceCode))
-})
+// test('测试声明与控制流 - 超纲挑战', () => {
+//   const sourceCode =
+//     '(() => { loop1: for (var i = 0; i < 3; i++) { loop2: for (var m = 1; m < 3; m++) { if (m % 2 === 0) { break loop1; } loop3: for (var y = 1; y < 10; y++) { if (y % 5 === 0) { continue loop2; } } } } return { i, m, y } })()'
+//   expect(customerEval(sourceCode)).toStrictEqual(eval(sourceCode))
+// })
