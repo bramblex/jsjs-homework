@@ -22,7 +22,8 @@ class Scope {
     }
     declare(kind = 'var', name, initValue = undefined) {
         if (kind === 'var') {
-            let scope = this    // 若当前作用域存在非函数类型的父级作用域时，就把变量定义到父级作用域    
+            // 把变量声明提升至函数体顶部
+            let scope = this
             while (scope.parent && scope.type !== 'function') { scope = scope.parent }
             this.variables[name] = new Value(initValue, 'var')
             return this.variables[name]

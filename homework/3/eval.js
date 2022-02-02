@@ -1,6 +1,8 @@
 const acorn = require('acorn');
 const Scope = require('./scope')
+const BlockInterruption = require('./interrupt')
 function evaluate(node, scope) {
+  if (!node) return
   switch (node.type) {
     case 'Program': {
       let arr = node.body.map(n => evaluate(n, scope))
@@ -12,9 +14,6 @@ function evaluate(node, scope) {
     case 'Identifier': {
       return scope.get(node.name);
     }
-    // case 'FunctionDeclaration': {
-    //   scope.declare
-    // }
     case 'ExpressionStatement': {
       return evaluate(node.expression, scope)
     }
@@ -78,33 +77,85 @@ function evaluate(node, scope) {
       return rightValue
     }
     case 'BlockStatement': {
-      const childScope = new Scope("Block", scope)
+      // const childScope = new Scope('block', scope)
       let ret
       for (const expression of node.body) {
-        ret = evaluate(expression, childScope)
+        // ret = evaluate(expression, childScope)
+        ret = evaluate(expression, scope)
+        if (ret instanceof BlockInterruption && ret.getType() === 'return') return ret;
+        if (ret instanceof BlockInterruption && ret.getType() === 'break') return ret;
+        if (ret instanceof BlockInterruption && ret.getType() === 'continue') return;
       }
-      if (ret && ret.kind === 'return') return ret.value;
-      if (ret && ret.kind === 'break') return ret;
-      if (ret && ret.kind === 'continue') return;
+
       return ret
     }
+    case 'FunctionDeclaration': {
+      // 匿名函数
+      // 命名函数
+      return scope.declare('var', node.id.name, function (...args) {
+        const nodeScope = new Scope('function', scope)
+        node.params.forEach((param, i) => {
+          nodeScope.declare('let', param.name, args[i])
+        })
+        return evaluate(node.body, nodeScope);
+      })
+
+
+    }
     case 'VariableDeclaration': {
-      return node.declarations.forEach(v => scope.declare(node.kind, v.id.name, evaluate(v.init, scope)))
+      return node.declarations.forEach(v => {
+        if (v.init && v.init.type === 'FunctionExpression' && v.init.id === null) {
+          throw new SyntaxError('Function statements require a function name')
+        }
+        return scope.declare(node.kind, v.id.name, evaluate(v.init, scope))
+      })
     }
     case 'IfStatement': {
       return evaluate(node.test, scope) ? evaluate(node.consequent, scope) : evaluate(node.alternate, scope)
     }
+    case 'SwitchStatement': {
+      let ret
+      console.log(node)
+      node.cases.forEach(c => {
+        // console.log('c.test ---> ', c.test)
+        // console.log('node.discriminant -- > ', node.discriminant)
+        if (c.test !== null && !(evaluate(c.test, scope) === evaluate(node.discriminant, scope))) return ret
+        c.consequent.forEach(e => {
+          if (e.type === 'BlockStatement') {
+            ret = evaluate(e, new Scope('block', scope))
+          } else {
+            ret = evaluate(e, scope)
+          }
+        })
+      })
+      return ret
+    }
+    case 'ContinueStatement': {
+      return new BlockInterruption('continue');
+    }
+    case 'BreakStatement': {
+      return new BlockInterruption('break')
+    }
     case 'WhileStatement': {
-      while (evaluate(node.test, scope)) {
-        evaluate(node.body, scope)
+      let ret
+      const whileScope = new Scope('block', scope)
+      while (evaluate(node.test, whileScope)) {
+        const whileInnerScope = new Scope('block', whileScope)
+        ret = evaluate(node.body, whileInnerScope)
+        if (ret instanceof BlockInterruption && ret.getType() === 'continue') continue
+        if (ret instanceof BlockInterruption && ret.getType() === 'break') return
+        if (ret instanceof BlockInterruption && ret.getType() === 'return') return ret
       }
-      return
+      return ret
     }
     case 'ForStatement': {
       let ret
+      // 包括定义索引等的定义域
       const forScope = new Scope('block', scope)
       for (evaluate(node.init, forScope); evaluate(node.test, forScope); evaluate(node.update, forScope)) {
-        ret = evaluate(node.body, forScope)
+        // 每次循环内产生内作用域
+        const forInnerScope = new Scope('block', forScope)
+        ret = evaluate(node.body, forInnerScope)
       }
       return ret
     }
@@ -162,7 +213,6 @@ function evaluate(node, scope) {
         case '!': return !evaluate(node.argument, scope)
         case '~': return ~evaluate(node.argument, scope)
         case 'typeof': return typeof evaluate(node.argument, scope)
-          Array
       }
     }
     case 'UpdateExpression': {
@@ -185,7 +235,7 @@ function evaluate(node, scope) {
         let props = node.properties
         const obj = {}
         props.forEach(p => {
-          obj[p.key.name] = evaluate(p.value)
+          obj[p.key.name] = evaluate(p.value, scope)
         });
         return obj
       }
@@ -200,24 +250,55 @@ function evaluate(node, scope) {
     }
     case 'CallExpression': {
       // 调用 evaluate(node.callee, env) 来得到 callee 所表示的方法，然后使用 node.arguments 中的参数（解析过的）来调用该方法
-      return evaluate(node.callee, scope)(...node.arguments.map(arg => evaluate(arg, scope)));
+      let ret = evaluate(node.callee, scope)(...node.arguments.map(arg => evaluate(arg, scope)));
+      return ret instanceof BlockInterruption ? ret.value : ret
+    }
+    case 'FunctionExpression': {
+      return function (...args) {
+        const nodeScope = new Scope('function', scope)
+        node.params.forEach((param, i) => {
+          nodeScope.declare('let', param.name, args[i])
+        })
+        return evaluate(node.body, nodeScope);
+      }
     }
     case 'ArrowFunctionExpression': {
       return function (...args) {
-        const childScope = new Scope('function', scope)
+        const funScope = new Scope('function', scope)
         node.params.forEach((param, i) => {
-          childScope.declare('let', param.name, args[i])
+          funScope.declare('let', param.name, args[i])
         })
-        return evaluate(node.body, childScope);
+        return evaluate(node.body, funScope);
       }
     }
-
+    case 'TryStatement': {
+      try {
+        const tryScope = new Scope('block', scope)
+        evaluate(node.block, tryScope)
+      } catch (err) {
+        const catchScope = new Scope('block', scope)
+        catchScope.declare('let', node.handler.param.name, err)
+        return evaluate(node.handler.body, catchScope)
+      } finally {
+        const finallyScope = new Scope('block', scope)
+        evaluate(node.finalizer, finallyScope)
+      }
+    }
+    case 'ThrowStatement': {
+      throw evaluate(node.argument, scope)
+    }
     case 'EmptyStatement': return
+    case 'SequenceExpression': {
+      let arr = node.expressions.map(e => evaluate(e, scope))
+      return arr[arr.length - 1]
+    }
     case 'ReturnStatement': {
-      return { kind: 'return', value: evaluate(node.argument, scope) }
+      // return { kind: 'return', value: evaluate(node.argument, scope) }
+      return new BlockInterruption('return', evaluate(node.argument, scope))
     }
 
   }
+  console.log(node)
   throw new Error(`Unsupported Syntax ${node.type} at Location ${node.start}:${node.end}`);
 }
 
