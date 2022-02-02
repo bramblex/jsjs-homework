@@ -25,7 +25,7 @@ class Scope {
             // 把变量声明提升至函数体顶部
             let scope = this
             while (scope.parent && scope.type !== 'function') { scope = scope.parent }
-            this.variables[name] = new Value(initValue, 'var')
+            scope.variables[name] = new Value(initValue, 'var')
             return this.variables[name]
         } else if (kind === 'let') {
             if (name in this.variables) { throw new SyntaxError(`Identifier ${name} has already been declared`) }
