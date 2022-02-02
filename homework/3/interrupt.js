@@ -6,5 +6,11 @@ class BlockInterruption {
     getType() {
         return this.type
     }
+    setLabel(label) {
+        this.label = label
+    }
+    getLabel() {
+        return this.label
+    }
 }
 module.exports = BlockInterruption
