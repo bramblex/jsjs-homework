@@ -35,39 +35,10 @@ function evaluate(node, scope, config) {
       }
      */
     case 'AssignmentExpression': {
-      // 等式右边的取值
-      let leftValue = evaluate(node.left, scope)
       let rightValue = evaluate(node.right, scope)
-      // 为对象的属性值赋值 例如obj.a.b = value,暂未实现夹带[]和类似fn()[1]()[2]的语法
-      if (node.left.type === 'MemberExpression') {
-        let n = node.left
-        let propList = []
-        while (!n.object.name) {
-          propList.push(n.property.name)
-          n = n.object
-        }
-        propList.push(n.property.name)
-        let obj = scope.get(n.object.name)
-        while (propList.length > 1) {
-          let pname = propList.pop()
-          obj = obj[pname]
-        }
-        switch (node.operator) {
-          case '=': obj[propList.pop()] = rightValue; break;
-          case '+=': obj[propList.pop()] = leftValue + rightValue; break;
-          case '-=': obj[propList.pop()] = leftValue - rightValue; break;
-          case '/=': obj[propList.pop()] = leftValue / rightValue; break;
-          case '*=': obj[propList.pop()] = leftValue * rightValue; break;
-          case '%=': obj[propList.pop()] = leftValue % rightValue; break;
-          case '<<=': obj[propList.pop()] = leftValue << rightValue; break;
-          case '>>=': obj[propList.pop()] = leftValue >> rightValue; break;
-          case '>>>=': obj[propList.pop()] = leftValue >>> rightValue; break;
-          case '|=': obj[propList.pop()] = leftValue | rightValue; break;
-          case '^=': obj[propList.pop()] = leftValue ^ rightValue; break;
-          case '&=': obj[propList.pop()] = leftValue & rightValue; break;
-        }
-
-      } else if (node.left.type === 'Identifier') {
+      if (node.left.type === 'Identifier') {
+        // 直接给变量赋值
+        let leftValue = evaluate(node.left, scope)
         switch (node.operator) {
           case '=': scope.set(node.left.name, rightValue); break;
           case '+=': scope.set(node.left.name, leftValue + rightValue); break;
@@ -82,8 +53,27 @@ function evaluate(node, scope, config) {
           case '^=': scope.set(node.left.name, leftValue ^ rightValue); break;
           case '&=': scope.set(node.left.name, leftValue & rightValue); break;
         }
+        return scope.get(node.left.name)
+      } else if (node.left.type === 'MemberExpression') {
+        // 给对象的内部属性赋值
+        let [leftObj, leftPropName] = evaluate(node.left, scope, { setObjPropVal: true })
+        let leftValue = leftObj[leftPropName]
+        switch (node.operator) {
+          case '=': leftObj[leftPropName] = rightValue; break;
+          case '+=': leftObj[leftPropName] = leftValue + rightValue; break;
+          case '-=': leftObj[leftPropName] = leftValue - rightValue; break;
+          case '/=': leftObj[leftPropName] = leftValue / rightValue; break;
+          case '*=': leftObj[leftPropName] = leftValue * rightValue; break;
+          case '%=': leftObj[leftPropName] = leftValue % rightValue; break;
+          case '<<=': leftObj[leftPropName] = leftValue << rightValue; break;
+          case '>>=': leftObj[leftPropName] = leftValue >> rightValue; break;
+          case '>>>=': leftObj[leftPropName] = leftValue >>> rightValue; break;
+          case '|=': leftObj[leftPropName] = leftValue | rightValue; break;
+          case '^=': leftObj[leftPropName] = leftValue ^ rightValue; break;
+          case '&=': leftObj[leftPropName] = leftValue & rightValue; break;
+        }
+        return leftObj[leftPropName];
       }
-      return rightValue
     }
     case 'BlockStatement': {
       let ret
@@ -257,14 +247,25 @@ function evaluate(node, scope, config) {
     }
     // ++ 和 --
     case 'UpdateExpression': {
-      let value = evaluate(node.argument, scope)
-      if (node.operator === '++') {
-        scope.set(node.argument.name, value + 1)
-        return node.prefix ? (value + 1) : value
+      let preValue = evaluate(node.argument, scope)
+      if (node.argument.type === 'MemberExpression') {
+        let [obj, objPropName] = evaluate(node.argument, scope, { setObjPropVal: true })
+        if (node.operator === '++') {
+          return node.prefix ? ++obj[objPropName] : obj[objPropName]++
+        } else {
+          return node.prefix ? --obj[objPropName] : obj[objPropName]--
+        }
       } else {
-        scope.set(node.argument.name, value - 1)
-        return node.prefix ? (value - 1) : value
+        // node.argument.type === 'Indentifier'
+        if (node.operator === '++') {
+          scope.set(node.argument.name, preValue + 1)
+          return node.prefix ? (preValue + 1) : preValue
+        } else {
+          scope.set(node.argument.name, preValue - 1)
+          return node.prefix ? (preValue - 1) : preValue
+        }
       }
+
 
     }
     // 三目运算符
@@ -281,9 +282,11 @@ function evaluate(node, scope, config) {
         return obj
       }
     case 'MemberExpression': {
+      // 是否设置属性内部值
+      let isSetObjPropVal = config?.setObjPropVal
       let obj = node.object.name ? scope.get(node.object.name) : evaluate(node.object, scope)
-      let pname = node.property.name
-      return obj[pname]
+      let pname = node.computed ? evaluate(node.property, scope) : node.property.name
+      return isSetObjPropVal ? [obj, pname] : obj[pname]
     }
     // 数组
     case 'ArrayExpression': {
