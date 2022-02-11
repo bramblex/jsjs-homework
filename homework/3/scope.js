@@ -15,7 +15,7 @@ module.exports = class Scope {
       value: undefined,
     };
     if (type === "var") {
-      if (!this.parent) {
+      if (!this.parent || this.type === "Function") {
         this.variables[name] = temp;
       } else {
         this.parent.declare(type, name);
