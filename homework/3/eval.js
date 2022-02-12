@@ -126,16 +126,23 @@ function evaluate(node, scope) {
       for (const varibale of node.declarations) {
         let name = varibale.id.name;
         scope.declare(node.kind, name);
-        scope.set(name, evaluate(varibale.init, scope));
+        if (varibale.init !== null)
+          scope.set(name, evaluate(varibale.init, scope));
       }
       return undefined;
     }
     case "ExpressionStatement":
       return evaluate(node.expression, scope);
+    /**
+     *  enum AssignmentOperator {
+     *      "=" | "+=" | "-=" | "*=" | "/=" | "%="
+     *          | "<<=" | ">>=" | ">>>="
+     *          | "|=" | "^=" | "&="
+     *  }
+     */
     case "AssignmentExpression": {
       let left = evaluate(node.left, scope);
       let right = evaluate(node.right, scope);
-
       switch (node.operator) {
         case "=":
           left = right;
@@ -146,6 +153,7 @@ function evaluate(node, scope) {
         case "+=":
           left += right;
           break;
+        // ...
       }
 
       // Assign to scope
@@ -172,22 +180,51 @@ function evaluate(node, scope) {
       }
       return left;
     }
+    case "UnaryExpression": {
+      switch (node.operator) {
+        case "+":
+          return +evaluate(node.argument);
+        case "-":
+          return -evaluate(node.argument);
+        case "!":
+          return !evaluate(node.argument);
+        case "~":
+          return ~evaluate(node.argument);
+        case "typeof":
+          return typeof evaluate(node.argument);
+        case "void":
+          return void evaluate(node.argument);
+        case "delete":
+          return delete evaluate(node.argument);
+      }
+    }
+    // Notes: prefix
     case "UpdateExpression": {
       let res;
       switch (node.operator) {
         case "++":
-          res = evaluate(node.argument, scope);
-          scope.set(node.argument.name, res + 1);
+          if (node.prefix) {
+            scope.set(node.argument.name, res + 1);
+            res = evaluate(node.argument, scope);
+          } else {
+            res = evaluate(node.argument, scope);
+            scope.set(node.argument.name, res + 1);
+          }
           break;
         case "--":
-          res = evaluate(node.argument, scope);
-          scope.set(node.argument.name, res - 1);
+          if (node.prefix) {
+            scope.set(node.argument.name, res - 1);
+            res = evaluate(node.argument, scope);
+          } else {
+            res = evaluate(node.argument, scope);
+            scope.set(node.argument.name, res - 1);
+          }
           break;
       }
       return res;
     }
+    // Notes: computed attribute
     case "MemberExpression": {
-      // computed !!!
       if (node.computed) {
         return evaluate(node.object, scope)[evaluate(node.property, scope)];
       } else {
@@ -221,7 +258,49 @@ function evaluate(node, scope) {
         }
         evaluate(node.update, child);
       }
-      return res.type ? res.value : res;
+      return res?.type ? res.value : res;
+    }
+    case "ForOfStatement": {
+      let res;
+      const child = new Scope("Block", scope);
+      const variable = node.left.declarations[0].id.name; // bug here
+      const arr = evaluate(node.right, scope);
+      evaluate(node.left, child);
+      for (const el of arr) {
+        child.set(variable, el);
+        res = evaluate(node.body, child);
+        if (res && res.type === "return") return res.value;
+        // process the break and continue by label
+        if (res && res.type === "break") {
+          if (!res.label || (res.label && res.label === node.label)) break;
+          else return res;
+        }
+        if (res && res.type === "continue") {
+          if (!res.label || (res.label && res.label === node.label)) {
+            evaluate(node.update, child);
+            continue;
+          } else return res;
+        }
+      }
+      return res?.type ? res.value : res;
+    }
+    case "DoWhileStatement": {
+      let res;
+      const child = new Scope("Block", scope);
+      do {
+        res = evaluate(node.body, child);
+        if (res && res.type === "return") return res.value;
+        // process the break and continue by label
+        if (res && res.type === "break") {
+          if (!res.label || (res.label && res.label === node.label)) break;
+          else return res;
+        }
+        if (res && res.type === "continue") {
+          if (!res.label || (res.label && res.label === node.label)) continue;
+          else return res;
+        }
+      } while (evaluate(node.test, child));
+      return res?.type ? res.value : res;
     }
     case "WhileStatement": {
       let res;
@@ -239,7 +318,7 @@ function evaluate(node, scope) {
           else return res;
         }
       }
-      return res.type ? res.value : res;
+      return res?.type ? res.value : res;
     }
     case "SwitchStatement": {
       let res;
@@ -260,7 +339,7 @@ function evaluate(node, scope) {
           }
         }
       }
-      return res.type ? res.value : res;
+      return res?.type ? res.value : res;
     }
     case "TryStatement": {
       let res;
@@ -290,7 +369,48 @@ function evaluate(node, scope) {
       node.body.label = name;
       return evaluate(node.body, scope);
     }
-    // construct the type for three special type
+    case "SequenceExpression": {
+      let res;
+      for (const stat of node.expressions) {
+        res = evaluate(stat, scope);
+      }
+      return res;
+    }
+    case "NewExpression": {
+      let newObj;
+      let name = node.callee.name;
+      switch (name) {
+        case "Number":
+          newObj = Number;
+          break;
+        case "String":
+          newObj = String;
+          break;
+        // ...skip
+        default:
+          newObj = scope.get(name);
+          break;
+      }
+      return new newObj(
+        ...node.arguments.map((argument) => {
+          return evaluate(argument, scope);
+        })
+      );
+    }
+    // skip
+    case "ThisExpression": {
+    }
+    // skip: disable in strict mode
+    case "WithStatement": {
+      return;
+    }
+    // no meaning
+    case "EmptyStatement": {
+      return;
+    }
+    case "DebuggerStatement":
+      return; // return { type: "debugger" };
+    // construct three special type
     case "ContinueStatement":
       return { type: "continue", label: node.label?.name };
     case "BreakStatement":
