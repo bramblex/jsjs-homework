@@ -8,10 +8,12 @@
   "dependencies": {
     "acorn": "^8.7.0",
     "astring": "^1.8.1",
-    "jest": "^27.4.7"
+    "ava": "^4.0.1"
   },
   "scripts": {
-    "test": "jest",
-    "test-homework-1": "jest homework/1/rename.test.js"
+    "test-final": "ava final/test",
+    "test-homework-1": "ava homework/1/rename.test.js",
+    "test-homework-2": "ava homework/2/eval.test.js",  
+    "test-homework-3": "ava homework/3/eval.test.js"
   }
 }
