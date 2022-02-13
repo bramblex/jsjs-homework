@@ -1,4 +1,5 @@
 const customerEval = require('./eval')
+const test = require('ava')
 
 function throwError() {
   throw new Error('error')
@@ -6,7 +7,7 @@ function throwError() {
 
 const baseEnv = { throwError }
 
-test('控制流 - 初级挑战', () => {
+test('控制流 - 初级挑战', t => {
   const sourceCodeList = [
     '(() => { let a = 3; if (a > 0) { return 1 } else { return 0 } })()',
     '(() => { let sum = 0; for (let i = 0; i < 10; i++) { sum += i } return sum })()',
@@ -14,10 +15,10 @@ test('控制流 - 初级挑战', () => {
     'var a = 1; var a = 2;'
     ];
   for (sourceCode of sourceCodeList) {
-    expect(customerEval(sourceCode, baseEnv)).toStrictEqual(eval(sourceCode))
+    t.deepEqual(customerEval(sourceCode, baseEnv), eval(sourceCode))
   }
 })
-test('声明 - 初级挑战', () => {
+test('声明 - 初级挑战', t => {
   const sourceCodeErrorMap = {
     'var a = 1;let b = 2;const c = 3': undefined,
     'var a = 1; var a = 2;': undefined,
@@ -25,14 +26,14 @@ test('声明 - 初级挑战', () => {
   }
   for (const [sourceCode, err] of Object.entries(sourceCodeErrorMap)) {
     if (err === undefined) {
-      expect(customerEval(sourceCode)).toBe(undefined)
+      t.deepEqual(customerEval(sourceCode), undefined)
     } else {
-      expect(() => customerEval(sourceCode)).toThrowError(err)
+      t.throws(() => customerEval(sourceCode), err)
     }
   }
 })
 
-test('测试声明与控制流 - 终极挑战', () => {
+test('测试声明与控制流 - 终极挑战', t => {
   const sourceCodeList = [
     '(() => { let a = 1; var b = 2; (() => { a = 2; b = 3; })(); return { a, b }; })()',
     '((() => { var n = 55; return () => { for (let i = 0; i < 10; i++) { n += i } return n } })())()',
