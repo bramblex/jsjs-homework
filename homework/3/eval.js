@@ -1,3 +1,6 @@
+/* eslint-disable no-case-declarations */
+/* eslint-disable no-empty */
+/* eslint-disable no-fallthrough */
 const acorn = require("acorn");
 const Scope = require("./scope");
 
@@ -323,9 +326,9 @@ function evaluate(node, scope) {
     case "SwitchStatement": {
       let res;
       const child = new Scope("Block", scope);
-      const cmp = evaluate(node.discriminant, child);
+      const target = evaluate(node.discriminant, child);
       for (let switchcase of node.cases) {
-        if (switchcase.test) {
+        if (evaluate(switchcase.test, child) === target) {
           for (const stat of switchcase.consequent) {
             res = evaluate(stat, child);
             if (res && res.type === "return") return res.value;

@@ -1,45 +1,26 @@
 
 // 作用域
 class Scope {
-  constructor(parent) {
-    this.parent = parent;
-    this.content = new Set();
-  }
-
-  get(name) {
-    if (this.content.has(name)) {
-      return this.content.get(name)
-    }
-    return this.parent?.get(name)
-  }
-
-  var(name) {
-    this.content.set(name, undefined)
-  }
-
-  set(name, value) {
-    if (this.content.has(name)) {
-      return this.content.set(name, value)
-    }
-    return this.parent?.set(name, value)
-  }
+  // @TODO: 补全
 }
 
-class StackFrame {
-  constructor(pc, closure) {
-    this.pc = pc
-    this.scope = new Scope(closure)
-  }
+class Stack {
+  // @TODO: 补全
+}
+
+class CallStackFrame {
+  // @TODO: 补全
 }
 
 class VirtualMachine {
   constructor() {
-    this._id = 0;
-    this.reset()
   }
 
-  runCommand([cmd, ...operand]) {
-    // @TODO: 这里补全虚拟机代码
+  runCommand([cmd, op0, op1, op2, op3, op4]) {
+    switch (cmd.toLowerCase()) {
+      // @TODO: 补全
+      case "var": { this.callStack.top().scope.var(a); break; }
+    }
   }
 
   reset() {
@@ -50,16 +31,15 @@ class VirtualMachine {
     this.r0 = null;
     this.r1 = null;
     this.r2 = null;
+    this.r3 = null;
+    this.r4 = null;
 
     // pc寄存器
     this.pc = 0;
 
     // 调用栈
-    this.stack = [new StackFrame(0, null)];
-  }
-
-  setRom(rom) {
-    this.rom = rom
+    this.callStack = new Stack();
+    this.callStack.push(new CallStackFrame(0, null))
   }
 
   step() {
@@ -68,7 +48,9 @@ class VirtualMachine {
     this.runCommand(command)
   }
 
-  run() {
+  run(rom) {
+    this.reset()
+    this.rom = rom
     while (this.pc < this.rom.length) {
       this.step()
     }
