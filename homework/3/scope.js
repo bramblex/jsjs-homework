@@ -44,7 +44,7 @@ class Scope {
             return this.variables[name].value
         }
         else if (this.parent) { return this.parent.get(name) }
-        else if (global[name]) { return global[name] }
+        else if (globalThis[name]) { return globalThis[name] }
         throw new ReferenceError(`${name} is not defined`)
     }
     set(name, value) {
