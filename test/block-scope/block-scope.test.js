@@ -1,7 +1,7 @@
-const test = require('ava');
-const { Scope, customEval } = require('../../eval');
+const test = require("ava");
+const { Scope, customEval } = require("../../eval");
 
-test("var don't have block scope", t => {
+test("var don't have block scope", (t) => {
   const scope = new Scope();
 
   const obj = customEval(
@@ -21,7 +21,7 @@ module.exports = {a:a, b:b};
   t.deepEqual(obj.b, 321);
 });
 
-test("let have block scope", t => {
+test("let have block scope", (t) => {
   const scope = new Scope();
 
   const obj = customEval(
@@ -41,7 +41,7 @@ module.exports = {a:a, b:b};
   t.deepEqual(obj.b, undefined);
 });
 
-test("let have block scope in the function", t => {
+test("let have block scope in the function", (t) => {
   const scope = new Scope();
 
   const abc = customEval(

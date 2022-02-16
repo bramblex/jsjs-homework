@@ -1,7 +1,7 @@
-const test = require('ava');
-const { customEval, Scope } = require('../../eval');
+const test = require("ava");
+const { customEval, Scope } = require("../../eval");
 
-test("FunctionExpression-1", t => {
+test("FunctionExpression-1", (t) => {
   const scope = new Scope();
 
   const testFunc = customEval(
@@ -14,14 +14,13 @@ module.exports = test;
   `,
     scope
   );
-
   t.true(typeof testFunc === "function");
   t.deepEqual(testFunc.length, 1);
   t.deepEqual(testFunc.name, "test");
   t.deepEqual(testFunc("world"), "hello world");
 });
 
-test("FunctionDeclaration-2", t => {
+test("FunctionDeclaration-2", (t) => {
   const scope = new Scope();
 
   const testFunc = customEval(
@@ -41,7 +40,7 @@ module.exports = func;
   t.deepEqual(testFunc("world"), "hello world");
 });
 
-test("FunctionDeclaration-name", t => {
+test("FunctionDeclaration-name", (t) => {
   const scope = new Scope();
 
   const person = customEval(
@@ -60,7 +59,7 @@ module.exports = person;
   t.deepEqual(person.sayName.name, "sayName");
 });
 
-test("invalid function call", t => {
+test("invalid function call", (t) => {
   const scope = new Scope();
 
   t.throws(() => {
@@ -75,7 +74,7 @@ test("invalid function call", t => {
   });
 });
 
-test("object-property function call name", t => {
+test("object-property function call name", (t) => {
   const scope = new Scope();
 
   t.throws(() => {
@@ -89,7 +88,7 @@ obj["a"]();
   });
 });
 
-test("function params should can be overwrite", t => {
+test("function params should can be overwrite", (t) => {
   const scope = new Scope();
 
   const test = customEval(

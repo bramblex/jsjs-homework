@@ -1,9 +1,8 @@
-const test = require('ava');
-const { Scope, customEval } = require('../../eval');
+const test = require("ava");
+const { Scope, customEval } = require("../../eval");
 
-test("new target with new", t => {
+test("new target with new", (t) => {
   const scope = new Scope({});
-
   const { Person, target } = customEval(
     `
 var target;

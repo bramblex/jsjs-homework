@@ -1,10 +1,10 @@
-const test = require('ava');
-const { Scope, customEval } = require('../../eval');
+const test = require("ava");
+const { Scope, customEval } = require("../../eval");
 
-test("ArrowFunctionExpression-1", t => {
-  const scope = new Scope({
-    name: "world"
-  });
+test.only("ArrowFunctionExpression-1", (t) => {
+  const scope = new Scope();
+  scope.declare("var", "name");
+  scope.set("name", "world");
 
   const func = customEval(
     `
@@ -22,7 +22,7 @@ module.exports = func;
   t.deepEqual(func(), "hello world");
 });
 
-test("ArrowFunctionExpression-2", t => {
+test("ArrowFunctionExpression-2", (t) => {
   const scope = new Scope();
 
   const func = customEval(
@@ -40,7 +40,7 @@ module.exports = func;
   t.deepEqual(func(), "hello undefined");
 });
 
-test("ArrowFunctionExpression-3", t => {
+test("ArrowFunctionExpression-3", (t) => {
   const scope = new Scope();
 
   const func = customEval(

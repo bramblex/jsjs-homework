@@ -11,9 +11,13 @@
     "ava": "^4.0.1"
   },
   "scripts": {
+    "test": "ava",
     "test-final": "ava final/test",
     "test-homework-1": "ava homework/1/rename.test.js",
-    "test-homework-2": "ava homework/2/eval.test.js",  
+    "test-homework-2": "ava homework/2/eval.test.js",
     "test-homework-3": "ava homework/3/eval.test.js"
+  },
+  "devDependencies": {
+    "eslint": "^8.9.0"
   }
 }

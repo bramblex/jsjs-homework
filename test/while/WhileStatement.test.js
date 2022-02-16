@@ -1,7 +1,7 @@
-const test = require('ava');
-const { customEval, Scope } = require('../../eval');
+const test = require("ava");
+const { customEval, Scope } = require("../../final/eval");
 
-test("WhileStatement-1", t => {
+test("WhileStatement-1", (t) => {
   const scope = new Scope();
 
   const obj = customEval(
@@ -23,7 +23,7 @@ module.exports = obj;
   t.deepEqual(obj.i, 3);
 });
 
-test("WhileStatement-2", t => {
+test("WhileStatement-2", (t) => {
   const scope = new Scope();
 
   const obj = customEval(

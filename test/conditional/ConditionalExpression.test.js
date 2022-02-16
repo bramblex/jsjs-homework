@@ -1,7 +1,7 @@
-const test = require('ava');
-const { customEval, Scope } = require('../../eval');
+const test = require("ava");
+const { customEval, Scope } = require("../../final/eval");
 
-test("ConditionalExpression-1", t => {
+test("ConditionalExpression-1", (t) => {
   const scope = new Scope();
 
   const num = customEval(
@@ -14,7 +14,7 @@ module.exports = true ? 1 : 2;
   t.deepEqual(num, 1);
 });
 
-test("ConditionalExpression-or-2", t => {
+test("ConditionalExpression-or-2", (t) => {
   const scope = new Scope();
 
   const num = customEval(
@@ -27,7 +27,7 @@ module.exports = false ? 1 : 2;
   t.deepEqual(num, 2);
 });
 
-test("ConditionalExpression with function call", t => {
+test("ConditionalExpression with function call", (t) => {
   const scope = new Scope();
 
   const num = customEval(
@@ -43,7 +43,7 @@ module.exports = isOnline() ? 1 : 2;
   t.deepEqual(num, 1);
 });
 
-test("ConditionalExpression in function call", t => {
+test("ConditionalExpression in function call", (t) => {
   const scope = new Scope();
 
   const isAdult = customEval(

@@ -1,7 +1,7 @@
-const test = require('ava');
-const { Scope, customEval }  = require('../../eval')
+const test = require("ava");
+const { Scope, customEval } = require("../../eval");
 
-test("Var should Hoisting", async t => {
+test("Var should Hoisting", async (t) => {
   const scope = new Scope();
 
   const say = customEval(
@@ -17,10 +17,10 @@ module.exports = function(word) {
   t.deepEqual(say("world"), "undefinedhello world");
 });
 
-test("Let should not Hoisting", async t => {
+test("Let should not Hoisting", async (t) => {
   const scope = new Scope();
 
-  t.throws(function() {
+  t.throws(function () {
     customEval(
       `
 console.log(a);
@@ -31,10 +31,10 @@ let a = 123;
   });
 });
 
-test("Const should not Hoisting", async t => {
+test("Const should not Hoisting", async (t) => {
   const scope = new Scope();
 
-  t.throws(function() {
+  t.throws(function () {
     customEval(
       `
 console.log(a);
@@ -45,7 +45,7 @@ const a = 123;
   });
 });
 
-test("Function should not Hoisting", async t => {
+test("Function should not Hoisting", async (t) => {
   const scope = new Scope();
 
   const say = customEval(
@@ -63,7 +63,7 @@ module.exports = function(word) {
   t.deepEqual(say("world"), "hello world");
 });
 
-test("For Hoisting", async t => {
+test("For Hoisting", async (t) => {
   const scope = new Scope();
 
   const func = customEval(
@@ -85,7 +85,7 @@ module.exports = get;
   t.true(func());
 });
 
-test("If Hoisting", async t => {
+test("If Hoisting", async (t) => {
   const scope = new Scope();
 
   const func = customEval(
@@ -104,7 +104,7 @@ module.exports = get;
   t.true(func());
 });
 
-test("While Hoisting", async t => {
+test("While Hoisting", async (t) => {
   const scope = new Scope();
 
   const func = customEval(
@@ -123,7 +123,7 @@ module.exports = get;
   t.true(func());
 });
 
-test("Switch Hoisting", async t => {
+test("Switch Hoisting", async (t) => {
   const scope = new Scope();
 
   const func = customEval(

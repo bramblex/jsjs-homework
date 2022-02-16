@@ -1,8 +1,8 @@
-const test = require('ava');
+const test = require("ava");
 
-const { customEval, Scope } = require('../../eval');
+const { customEval, Scope } = require("../../eval");
 
-test("ArrayExpression-1", t => {
+test.only("ArrayExpression-1", (t) => {
   const scope = new Scope();
 
   const arr = customEval(
@@ -20,7 +20,7 @@ module.exports = arr;
   t.deepEqual(arr, [1, 2, 3, 4]);
 });
 
-test("ArrayExpression-2", t => {
+test("ArrayExpression-2", (t) => {
   const scope = new Scope();
 
   const arr = customEval(
@@ -38,7 +38,7 @@ module.exports = arr;
   t.deepEqual(arr, [1, 2, 6, 4]);
 });
 
-test("ArrayExpression-with-undefined", t => {
+test("ArrayExpression-with-undefined", (t) => {
   const scope = new Scope();
 
   const arr = customEval(
@@ -53,7 +53,7 @@ module.exports = [1, 2, undefined, 4];
   t.deepEqual(arr, [1, 2, undefined, 4]);
 });
 
-test("ArrayExpression-with-null", t => {
+test("ArrayExpression-with-null", (t) => {
   const scope = new Scope();
 
   const arr = customEval(

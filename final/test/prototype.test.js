@@ -1,7 +1,7 @@
-const test = require('ava');
-const { customEval, Scope } = require('../eval');
+const test = require("ava");
+const { customEval, Scope } = require("../final/eval");
 
-test("set prototype with a hole object", t => {
+test("set prototype with a hole object", (t) => {
   const scope = new Scope();
 
   const { man, Man } = customEval(
@@ -25,10 +25,10 @@ module.exports = {man: new Man(), Man: Man};
   t.true(man.say === man.__proto__.say);
 });
 
-test("Multiple prototype", t => {
+test("Multiple prototype", (t) => {
   const scope = new Scope();
 
-  const { man, Man, name } = customEval(
+  const { man, Man } = customEval(
     `
 function Man () {
 
@@ -51,7 +51,7 @@ module.exports = { Man, man }
   t.deepEqual(Object.keys(man).length, 0);
 });
 
-test("prototype without return instance", t => {
+test("prototype without return instance", (t) => {
   const scope = new Scope();
 
   const { test, Test } = customEval(
