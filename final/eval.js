@@ -250,7 +250,7 @@ function evaluate(node, scope, options = {}) {
         child.set("new.target", new.target);
 
         let res = evaluate.call(this, node.body, child);
-        return res?.type ? res.value : res;
+        if (res?.type === "return") return res.value;
       };
       setObjProperty(func, "length", node.params.length);
       setObjProperty(func, "name", name);
@@ -267,7 +267,7 @@ function evaluate(node, scope, options = {}) {
         });
 
         let res = evaluate.call(this, node.body, child);
-        return res?.type ? res.value : res;
+        if (res?.type === "return") return res.value;
       };
       setObjProperty(func, "length", node.params.length);
       setObjProperty(func, "name", node.id?.name || options?.key);
@@ -281,7 +281,7 @@ function evaluate(node, scope, options = {}) {
           child.set(param.name, args[_i]);
         });
         let res = evaluate.call(this, node.body, child);
-        return res?.type ? res.value : res;
+        if (res?.type === "return") return res.value;
       };
       setObjProperty(func, "length", node.params.length);
       options.key && setObjProperty(func, "name", options.key);
@@ -336,7 +336,9 @@ function evaluate(node, scope, options = {}) {
         if (!options?.preprocess && varibale.init !== null) {
           scope.set(
             name,
-            evaluate.call(this, varibale.init, scope, { key: node.id?.name })
+            evaluate.call(this, varibale.init, scope, {
+              key: varibale.id?.name,
+            })
           );
         }
       }
@@ -627,6 +629,11 @@ function evaluate(node, scope, options = {}) {
           })
         )
       ))();
+      // return new newObj(
+      //   ...node.arguments.map((argument) => {
+      //     return evaluate.call(this, argument, scope);
+      //   })
+      // );
     }
     case "ThisExpression": {
       return this;
@@ -659,11 +666,11 @@ function evaluate(node, scope, options = {}) {
 }
 
 function customEval(code, scope = new Scope("Global")) {
-  scope.declare("const", "module");
+  scope.declare("let", "module");
   scope.set("module", { exports: {} });
 
   const node = acorn.parse(code, {
-    ecmaVersion: 6,
+    ecmaVersion: "latest",
   });
 
   // return evaluate.call(this, node, scope);
