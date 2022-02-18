@@ -3,6 +3,7 @@ const traverse = require('../../common/traverse')
 const rename = require('./rename')
 const test = require('ava')
 
+// TODO: 无视代码格式标准化
 function toStandard(code) {
   const root = acorn.parse(code, { ecmaVersion: 5 })
 
