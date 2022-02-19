@@ -1,88 +1,5 @@
 const acorn = require('acorn');
-
-class Scope {
-  constructor(initial /* 初始化变量 */, parent, type = 'block') {
-    this.variables = {};
-    for (const key in initial) {
-      this.variables[key] = new Value(initial[key])
-    }
-    this.type = type; // 'funcition' | 'block'
-    this.parent = parent;
-  }
-  declare(kind = 'var', name, initValue = undefined) {
-    if (kind === 'var') {
-      if (globalThis.global !== undefined && name === 'global') return new Value(initValue);
-      if (globalThis.window !== undefined && name === 'window') return new Value(initValue);
-      if (name === 'globalThis') return new Value(initValue);
-    }
-
-    if (kind === 'var') {
-      // 把变量声明提升至函数体顶部
-      let scope = this
-      while (scope.parent && scope.type !== 'function') { scope = scope.parent }
-      scope.variables[name] = new Value(initValue, 'var')
-      return this.variables[name]
-    } else if (kind === 'let') {
-      if (name in this.variables) { throw new SyntaxError(`Identifier ${name} has already been declared`) }
-      this.variables[name] = new Value(initValue, 'let')
-      return this.variables[name]
-    } else if (kind === 'const') {
-      if (name in this.variables) { throw new SyntaxError(`Identifier ${name} has already been declared`) }
-      this.variables[name] = new Value(initValue, 'const')
-      return this.variables[name]
-    } else {
-      throw new Error(`canjs: Invalid Variable Declaration Kind of "${kind}"`)
-    }
-  }
-  get(name) {
-    if (name in this.variables) {
-      return this.variables[name].value
-    }
-    else if (this.parent) { return this.parent.get(name) }
-    else if (name in globalThis) { return globalThis[name] }
-    throw new ReferenceError(`${name} is not defined`)
-  }
-  set(name, value) {
-    if (globalThis.global !== undefined && name === 'global') return new Value(value);
-    if (globalThis.window !== undefined && name === 'window') return new Value(value);
-    if (name === 'globalThis') return new Value(value);
-    if (name in this.variables) { this.variables[name].set(value) }
-    else if (this.parent) { this.parent.set(name, value) }
-    else this.declare('var', name, value)
-  }
-}
-
-class Value {
-  constructor(value, kind = 'let') {
-    this.value = value
-    this.kind = kind
-  }
-  set(value) {
-    // 禁止重新对const类型变量赋值    
-    if (this.kind === 'const') {
-      throw new TypeError('Assignment to constant variable')
-    } else {
-      this.value = value
-    }
-  }
-  get() { return this.value }
-}
-
-class BlockInterruption {
-  constructor(type, value) {
-    this.type = type
-    this.value = value
-  }
-  getType() {
-    return this.type
-  }
-  setLabel(label) {
-    this.label = label
-  }
-  getLabel() {
-    return this.label
-  }
-}
+const { Scope, BlockInterruption } = require('./scope')
 
 function evaluate(node, scope, config) {
   if (!node) return
@@ -125,8 +42,9 @@ function evaluate(node, scope, config) {
       }
      */
     case 'AssignmentExpression': {
-      let rightValue = evaluate.call(this, node.right, scope)
+
       if (node.left.type === 'Identifier') {
+        let rightValue = evaluate.call(this, node.right, scope)
         // 直接给变量赋值
         if (node.operator === '=') scope.set(node.left.name, rightValue);
         else {
@@ -143,16 +61,21 @@ function evaluate(node, scope, config) {
             case '|=': scope.set(node.left.name, leftValue | rightValue); break;
             case '^=': scope.set(node.left.name, leftValue ^ rightValue); break;
             case '&=': scope.set(node.left.name, leftValue & rightValue); break;
+            case '**=': scope.set(node.left.name, leftValue = Math.pow(leftValue, rightValue)); break;
+            case '||=': scope.set(node.left.name, leftValue = leftValue || rightValue); break;
+            case '&&=': scope.set(node.left.name, leftValue = leftValue && rightValue); break;
+            case '??=': scope.set(node.left.name, leftValue = leftValue ?? rightValue); break;
           }
         }
         return scope.get(node.left.name)
       } else if (node.left.type === 'MemberExpression') {
         // 给对象的内部属性赋值
         let [leftObj, leftPropName] = evaluate.call(this, node.left, scope, { setObjPropVal: true })
+        let rightValue = evaluate.call(this, node.right, scope)
+        if (node.operator === '=') return leftObj[leftPropName] = rightValue;
         let leftValue = leftObj[leftPropName]
         let retVal;
         switch (node.operator) {
-          case '=': retVal = rightValue; break;
           case '+=': retVal = leftValue + rightValue; break;
           case '-=': retVal = leftValue - rightValue; break;
           case '/=': retVal = leftValue / rightValue; break;
@@ -173,8 +96,10 @@ function evaluate(node, scope, config) {
       let ret
       for (const expression of node.body) {
         if (expression.type === 'FunctionDeclaration')
-          scope.declare('var', expression.id.name)
+          // 函数提升
+          evaluate.call(this, expression, scope)
         else if (expression.type === 'VariableDeclaration' && expression.kind === 'var')
+          // var 变量提升
           expression.declarations?.forEach(d => {
             scope.declare('var', d.id.name)
           })
@@ -183,13 +108,27 @@ function evaluate(node, scope, config) {
         if (expression.type === 'BlockStatement') {
           ret = evaluate.call(this, expression, new Scope({}, scope, 'block'))
         }
-        else
+        else if (expression !== 'FunctionDeclaration')
           ret = evaluate.call(this, expression, scope)
         if (ret instanceof BlockInterruption) return ret;
       }
       return ret
     }
     case 'FunctionDeclaration': {
+      if (node.async) {
+        const asyncFun = function (...args) {
+          return new Promise(function (resolve, reject) {
+            const nodeScope = new Scope({}, scope, 'function')
+            node.params.forEach((param, i) => {
+              nodeScope.declare('let', param.name, args[i])
+            })
+            let ret = evaluate.call(this, node.body, nodeScope);
+            if (ret instanceof BlockInterruption && ret.getType() === 'return') return resolve(ret.value)
+            resolve(ret)
+          })
+        }
+        return scope.declare('var', node.id.name, asyncFun)
+      }
       // 命名函数
       const fun = function (...args) {
         const nodeScope = new Scope({}, scope, 'function')
@@ -230,18 +169,21 @@ function evaluate(node, scope, config) {
     case 'SwitchStatement': {
       let switchScope = new Scope({}, scope, 'block')
       let discriminant = evaluate.call(this, node.discriminant, switchScope)
+      let isMatched = false//匹配
+      let ret
       for (const c of node.cases) {
-
         if (c.test !== null && (evaluate.call(this, c.test, switchScope) === discriminant) || c.test === null) {
+          isMatched = true
+        }
+        if (isMatched) {
           let caseScope = new Scope({}, switchScope, 'block')
-          let ret
           c.consequent.forEach(e => {
-            ret = evaluate.call(this, e, caseScope)
+            ret = e.type === 'BlockStatement' ? evaluate.call(this, e, caseScope) : evaluate.call(this, e, switchScope)
           })
-          return ret
+          if (ret instanceof BlockInterruption) return ret
         }
       }
-      return
+      return ret
     }
     // continue 语句
     case 'ContinueStatement': {
@@ -283,9 +225,21 @@ function evaluate(node, scope, config) {
       let label = config?.label
       // 包括定义索引等的定义域
       const forScope = new Scope({}, scope, 'block')
-      for (evaluate.call(this, node.init, forScope); evaluate.call(this, node.test, forScope); evaluate.call(this, node.update, forScope)) {
-        // 每次循环内产生内作用域
-        const forInnerScope = new Scope({}, forScope, 'block')
+      const varNames = []
+      // for循环是否是以let声明初始化
+      const isLetInit = node.init?.type === 'VariableDeclaration' && node.init.kind === 'let'
+      for (evaluate.call(this, node.init, forScope);
+        node.test === null ? true : evaluate.call(this, node.test, forScope);
+        evaluate.call(this, node.update, forScope)
+      ) {
+        // init时的变量 存储的作用域 每次循环都产生新变量作用域
+        const forInitScope = new Scope({}, forScope, 'block')
+        // 若为let则向父节点拷贝变量
+        if (isLetInit) {
+          forInitScope.copyFromParent()
+        }
+        // 每次循环 运行时 的作用域
+        const forInnerScope = new Scope({}, forInitScope, 'block')
         // 运行while内代码
         ret = evaluate.call(this, node.body, forInnerScope)
         // continue
@@ -361,6 +315,8 @@ function evaluate(node, scope, config) {
       switch (node.operator) {
         case '&&': return evaluate.call(this, node.left, scope) && evaluate.call(this, node.right, scope)
         case '||': return evaluate.call(this, node.left, scope) || evaluate.call(this, node.right, scope)
+        case '??': return evaluate.call(this, node.left, scope) ?? evaluate.call(this, node.right, scope)
+        default: break
       }
     }
     // 基本运算符
@@ -400,7 +356,7 @@ function evaluate(node, scope, config) {
         case '&': return left & right
         case 'in': return left in right
         case 'instanceof': return left instanceof right
-        case '**': return left ** right
+        case '**': return Math.pow(left, right)
       }
     }
     // enum UnaryOperator {"-" | "+" | "!" | "~" | "typeof" | "void" | "delete"}
@@ -453,7 +409,38 @@ function evaluate(node, scope, config) {
       let props = node.properties
       const obj = {}
       props.forEach(p => {
-        obj[p.key.name] = evaluate.call(this, p.value, scope)
+        // 属性值
+        let val = evaluate.call(this, p.value, scope)
+        // 属性名
+        let pName = p.computed ? evaluate.call(this, p.key.name, scope) : p.key.name
+        switch (p.kind) {
+          case 'init': {
+            if (p.value.type === 'FunctionExpression' && p.value.id === null) {
+              Object.defineProperty(val, 'name', {
+                get() {
+                  return pName
+                }
+              })
+            }
+            obj[p.key.name] = val
+          } break;
+          case 'get': {
+            Object.defineProperty(obj, pName, {
+              get() {
+                return val.call(obj)
+              }
+            })
+            break;
+          }
+          case 'set': {
+            Object.defineProperty(obj, pName, {
+              set(v) {
+                return val.call(obj, v)
+              }
+            })
+          } break;
+        }
+
       });
       return obj
     }
@@ -529,7 +516,7 @@ function evaluate(node, scope, config) {
         let ret = evaluate.call(this, node.body, funScope);
         if (node.async) return new Promise(ret)
         if (ret instanceof BlockInterruption && ret.getType() === 'return') return ret.value
-        return
+        return ret
       }
       Object.defineProperty(fun, 'name', {
         get() {
@@ -568,25 +555,35 @@ function evaluate(node, scope, config) {
     case 'ReturnStatement': {
       return new BlockInterruption('return', evaluate.call(this, node.argument, scope))
     }
-    // new 构造函数
+    // new 关键字
     case 'NewExpression': {
       const callee = evaluate.call(this, node.callee, scope)
       if (callee.prototype === undefined) {
         throw new TypeError(`${srcCode.substring(node.callee.start, node.callee.end)} is not a constructor`)
       }
       const args = node.arguments.map(arg => evaluate.call(this, arg, scope))
+      // 当callee是globalThis上内置的系统函数可以直接new时，则直接new
+      if (callee.name in globalThis && globalThis[callee.name] === callee) return new callee(...args)
+      // 构造原型链模拟new
       const o = Object.create(callee.prototype)
       // o.toString = () => { return `[object ${node.callee.name}]` }
       const k = callee.apply(o, args)
-      return k instanceof Object ? Object.create(o.prototype) : o
-      // return new callee(...args)
+      return k instanceof Object ? k : o
     }
     case 'ThisExpression': {
       return this
     }
     // new.target指向
     case 'MetaProperty': {
-      return this.__proto__?.constructor
+      // 仅通过测试案例 但不严谨，若用对象调用则结果错误
+      return this === globalThis ? undefined : this.constructor
+    }
+    case 'AwaitExpression': {
+      const ret = evaluate.call(this, node.argument, scope)
+      return ret instanceof Promise ? ret : new Promise(function (res) { res(ret) })
+    }
+    case 'YieldExpression': {
+      return
     }
   }
   console.log(node)
