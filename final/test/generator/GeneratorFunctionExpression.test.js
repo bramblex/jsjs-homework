@@ -1,10 +1,10 @@
-const test = require('ava');
-const { Scope, customEval } = require('../../eval');
+const test = require("ava");
+const { Scope, customEval } = require("../../eval");
 
-test("GeneratoeFunction-1", t => {
-  const scope = new Scope({
-    name: "world"
-  });
+test("GeneratoeFunction-1", (t) => {
+  const scope = new Scope();
+  scope.declare("var", "name");
+  scope.set("name", "world");
 
   const get = customEval(
     `
@@ -23,10 +23,10 @@ module.exports = get;
   t.deepEqual(generator.next(), { done: true, value: undefined });
 });
 
-test("GeneratoeFunction-2", t => {
-  const scope = new Scope({
-    name: "world"
-  });
+test("GeneratoeFunction-2", (t) => {
+  const scope = new Scope();
+  scope.declare("var", "name");
+  scope.set("name", "world");
 
   const get = customEval(
     `
@@ -48,10 +48,10 @@ module.exports = get;
   t.deepEqual(generator.next(), { done: true, value: undefined });
 });
 
-test("GeneratoeFunction-3", t => {
-  const scope = new Scope({
-    name: "world"
-  });
+test("GeneratoeFunction-3", (t) => {
+  const scope = new Scope();
+  scope.declare("var", "name");
+  scope.set("name", "world");
 
   const get = customEval(
     `
@@ -74,10 +74,10 @@ module.exports = get;
   t.deepEqual(generator.next(), { done: true, value: 233 });
 });
 
-test("GeneratoeFunction-4", t => {
-  const scope = new Scope({
-    name: "world"
-  });
+test("GeneratoeFunction-4", (t) => {
+  const scope = new Scope();
+  scope.declare("var", "name");
+  scope.set("name", "world");
 
   const get = customEval(
     `
@@ -100,10 +100,10 @@ module.exports = get;
   t.deepEqual(generator.next(), { done: true, value: undefined });
 });
 
-test("GeneratoeFunction-5", t => {
-  const scope = new Scope({
-    name: "world"
-  });
+test("GeneratoeFunction-5", (t) => {
+  const scope = new Scope();
+  scope.declare("var", "name");
+  scope.set("name", "world");
 
   const get = customEval(
     `

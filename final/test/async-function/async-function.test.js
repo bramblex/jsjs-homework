@@ -1,16 +1,16 @@
-const test = require('ava');
+const test = require("ava");
 
-const { Scope, customEval } = require('../../eval');
+const { Scope, customEval } = require("../../eval");
 
 function sleep(ms) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     setTimeout(() => {
       resolve();
     }, ms);
   });
 }
 
-test("async with resolve", async t => {
+test("async with resolve", async (t) => {
   const scope = new Scope({});
 
   const get = customEval(
@@ -33,7 +33,7 @@ module.exports = get;
   t.deepEqual(result, 123);
 });
 
-test("async with reject", async t => {
+test("async with reject", async (t) => {
   const scope = new Scope({});
 
   const get = customEval(
@@ -58,8 +58,10 @@ module.exports = get;
   }
 });
 
-test("async with async action", async t => {
-  const scope = new Scope({ sleep });
+test("async with async action", async (t) => {
+  const scope = new Scope();
+  scope.declare("var", "sleep");
+  scope.set("sleep", sleep);
 
   const get = customEval(
     `

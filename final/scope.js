@@ -8,12 +8,12 @@
 module.exports = class Scope {
   constructor(type = "Global", parent = null) {
     this.variables = {};
-    this.type = type;
+    if (["Global", "Function", "Block"].includes(type)) this.type = type;
+    // else throw new Error(`undefined type '${type}' for scope.`);
     this.parent = parent;
   }
 
   /**
-   *
    * @param {String} type
    * @param {String} name
    * @param {Boolean} global  if defined in global

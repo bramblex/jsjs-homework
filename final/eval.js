@@ -1,7 +1,9 @@
+/* eslint-disable require-yield */
 /* eslint-disable no-case-declarations */
 /* eslint-disable no-fallthrough */
 const acorn = require("acorn");
 const Scope = require("./scope");
+const { asyncToGenerator } = require("./libs");
 
 /**
  * 修改对象 obj 上的不可变变量
@@ -14,8 +16,6 @@ function setObjProperty(obj, prop, val) {
   config.writable = true;
   Object.defineProperty(obj, prop, config);
   obj[prop] = val;
-  // config.writable = false;
-  // Object.defineProperty(obj, prop, config);
 }
 
 /**
@@ -102,6 +102,8 @@ function evaluate(node, scope, options = {}) {
           return Function;
         case "Object":
           return Object;
+        case "Promise":
+          return Promise;
         default:
           // global property
           if (options.setObj && !scope.has(node.name)) {
@@ -110,148 +112,126 @@ function evaluate(node, scope, options = {}) {
           return scope.get(node.name);
       }
     }
-    case "BinaryExpression":
+    case "BinaryExpression": {
+      let left = evaluate.call(this, node.left, scope);
+      let right = evaluate.call(this, node.right, scope);
+      left = left?.type ? left?.value : left;
+      right = right?.type ? right?.value : right;
       switch (node.operator) {
         case "+":
-          return (
-            evaluate.call(this, node.left, scope) +
-            evaluate.call(this, node.right, scope)
-          );
+          return left + right;
         case "-":
-          return (
-            evaluate.call(this, node.left, scope) -
-            evaluate.call(this, node.right, scope)
-          );
+          return left - right;
         case "*":
-          return (
-            evaluate.call(this, node.left, scope) *
-            evaluate.call(this, node.right, scope)
-          );
+          return left * right;
         case "/":
-          return (
-            evaluate.call(this, node.left, scope) /
-            evaluate.call(this, node.right, scope)
-          );
+          return left / right;
         case "%":
-          return (
-            evaluate.call(this, node.left, scope) %
-            evaluate.call(this, node.right, scope)
-          );
+          return left % right;
         case "|":
-          return (
-            evaluate.call(this, node.left, scope) |
-            evaluate.call(this, node.right, scope)
-          );
+          return left | right;
         case "&":
-          return (
-            evaluate.call(this, node.left, scope) &
-            evaluate.call(this, node.right, scope)
-          );
+          return left & right;
         case "^":
-          return (
-            evaluate.call(this, node.left, scope) ^
-            evaluate.call(this, node.right, scope)
-          );
+          return left ^ right;
         case "==":
-          return (
-            evaluate.call(this, node.left, scope) ==
-            evaluate.call(this, node.right, scope)
-          );
+          return left == right;
         case "!=":
-          return (
-            evaluate.call(this, node.left, scope) !=
-            evaluate.call(this, node.right, scope)
-          );
+          return left != right;
         case "===":
-          return (
-            evaluate.call(this, node.left, scope) ===
-            evaluate.call(this, node.right, scope)
-          );
+          return left === right;
         case "!==":
-          return (
-            evaluate.call(this, node.left, scope) !==
-            evaluate.call(this, node.right, scope)
-          );
+          return left !== right;
         case "<":
-          return (
-            evaluate.call(this, node.left, scope) <
-            evaluate.call(this, node.right, scope)
-          );
+          return left < right;
         case ">":
-          return (
-            evaluate.call(this, node.left, scope) >
-            evaluate.call(this, node.right, scope)
-          );
+          return left > right;
         case "<<":
-          return (
-            evaluate.call(this, node.left, scope) <<
-            evaluate.call(this, node.right, scope)
-          );
+          return left << right;
         case ">>":
-          return (
-            evaluate.call(this, node.left, scope) >>
-            evaluate.call(this, node.right, scope)
-          );
+          return left >> right;
         case ">>>":
-          return (
-            evaluate.call(this, node.left, scope) >>>
-            evaluate.call(this, node.right, scope)
-          );
+          return left >>> right;
         case "<=":
-          return (
-            evaluate.call(this, node.left, scope) <=
-            evaluate.call(this, node.right, scope)
-          );
+          return left <= right;
         case ">=":
-          return (
-            evaluate.call(this, node.left, scope) >=
-            evaluate.call(this, node.right, scope)
-          );
+          return left >= right;
         case "**":
-          return (
-            evaluate.call(this, node.left, scope) **
-            evaluate.call(this, node.right, scope)
-          );
+          return left ** right;
         case "in":
-          return (
-            evaluate.call(this, node.left, scope) in
-            evaluate.call(this, node.right, scope)
-          );
+          return left in right;
         case "instanceof":
-          return (
-            evaluate.call(this, node.left, scope) instanceof
-            evaluate.call(this, node.right, scope)
-          );
+          return left instanceof right;
       }
-    case "LogicalExpression":
+    }
+    case "LogicalExpression": {
+      let left = evaluate.call(this, node.left, scope);
+      let right = evaluate.call(this, node.right, scope);
+      left = left?.type ? left?.value : left;
+      right = right?.type ? right?.value : right;
       switch (node.operator) {
         case "&&":
-          return (
-            evaluate.call(this, node.left, scope) &&
-            evaluate.call(this, node.right, scope)
-          );
+          return left && right;
         case "||":
-          return (
-            evaluate.call(this, node.left, scope) ||
-            evaluate.call(this, node.right, scope)
-          );
+          return left || right;
       }
+    }
     case "FunctionDeclaration": {
       let name = node.id.name;
-      let func = function (...args) {
-        // Except: AssignmentPattern
-        const child = new Scope("Function", scope);
-        node.params.forEach((param, _i) => {
-          child.declare("let", param.name);
-          child.set(param.name, args[_i]);
-        });
-        // meta
-        child.declare("let", "new.target");
-        child.set("new.target", new.target);
+      let func;
+      if (node.async) {
+        func = asyncToGenerator(function* (...args) {
+          // Except: AssignmentPattern
+          const child = new Scope("Function", scope);
+          node.params.forEach((param, _i) => {
+            child.declare("let", param.name);
+            child.set(param.name, args[_i]);
+          });
+          // meta
+          child.declare("let", "new.target");
+          child.set("new.target", new.target);
 
-        let res = evaluate.call(this, node.body, child);
-        if (res?.type === "return") return res.value;
-      };
+          let res = evaluate.call(this, node.body, child);
+          if (res?.type === "await") yield res.value;
+          if (res?.type === "return") return res.value;
+        });
+      } else if (node.generator) {
+        func = function* (...args) {
+          // Except: AssignmentPattern
+          const child = new Scope("Function", scope);
+          node.params.forEach((param, _i) => {
+            child.declare("let", param.name);
+            child.set(param.name, args[_i]);
+          });
+          // meta
+          child.declare("let", "new.target");
+          child.set("new.target", new.target);
+
+          for (const stat of node.body.body) {
+            let res = evaluate.call(this, stat, child);
+            if (res?.type === "yield") {
+              if (res?.key) scope.set(res.key, yield res.value);
+              else yield res.value;
+            }
+            if (res?.type === "return") return res.value;
+          }
+        };
+      } else {
+        func = function (...args) {
+          // Except: AssignmentPattern
+          const child = new Scope("Function", scope);
+          node.params.forEach((param, _i) => {
+            child.declare("let", param.name);
+            child.set(param.name, args[_i]);
+          });
+          // meta
+          child.declare("let", "new.target");
+          child.set("new.target", new.target);
+
+          let res = evaluate.call(this, node.body, child);
+          if (res?.type === "return") return res.value;
+        };
+      }
       setObjProperty(func, "length", node.params.length);
       setObjProperty(func, "name", name);
       scope.declare("let", name);
@@ -295,6 +275,7 @@ function evaluate(node, scope, options = {}) {
         callee = obj[prop];
         that = obj;
       }
+
       return callee.apply(
         that,
         node.arguments.map((subNode) => evaluate.call(this, subNode, scope))
@@ -330,29 +311,26 @@ function evaluate(node, scope, options = {}) {
         evaluate.call(this, element, scope)
       );
     case "VariableDeclaration": {
+      let ret;
       for (const varibale of node.declarations) {
         let name = varibale.id.name;
         scope.declare(node.kind, name);
         if (!options?.preprocess && varibale.init !== null) {
-          scope.set(
-            name,
-            evaluate.call(this, varibale.init, scope, {
-              key: varibale.id?.name,
-            })
-          );
+          let res = evaluate.call(this, varibale.init, scope, {
+            key: varibale.id?.name,
+          });
+          if (res.type === "yield") {
+            ret = res;
+            ret.key = name;
+          } else {
+            scope.set(name, res?.value ? res.value : res);
+          }
         }
       }
-      return undefined;
+      return ret;
     }
     case "ExpressionStatement":
       return evaluate.call(this, node.expression, scope);
-    /**
-     *  enum AssignmentOperator {
-     *      "=" | "+=" | "-=" | "*=" | "/=" | "%="
-     *          | "<<=" | ">>=" | ">>>="
-     *          | "|=" | "^=" | "&="
-     *  }
-     */
     case "AssignmentExpression": {
       let left = evaluate.call(this, node.left, scope, { setObj: true });
       let right = evaluate.call(this, node.right, scope);
@@ -382,7 +360,24 @@ function evaluate(node, scope, options = {}) {
         case "%=":
           left %= right;
           break;
-        // ...
+        case "<<=":
+          left <<= right;
+          break;
+        case ">>=":
+          left >>= right;
+          break;
+        case ">>>=":
+          left >>>= right;
+          break;
+        case "|=":
+          left |= right;
+          break;
+        case "^=":
+          left ^= right;
+          break;
+        case "&=":
+          left &= right;
+          break;
       }
 
       // Assign to scope
@@ -422,7 +417,7 @@ function evaluate(node, scope, options = {}) {
       let obj,
         prop,
         copy = res;
-      if (typeof res === "object") {
+      if (res instanceof Array) {
         [obj, prop] = res;
         res = obj[prop];
         copy = obj[prop];
@@ -437,6 +432,7 @@ function evaluate(node, scope, options = {}) {
           break;
       }
 
+      // update scope
       if (node.argument.type === "Identifier") {
         scope.set(node.argument.name, res);
       } else {
@@ -480,6 +476,7 @@ function evaluate(node, scope, options = {}) {
       while (evaluate.call(this, node.test, child)) {
         res = evaluate.call(this, node.body, child);
         if (res && res.type === "return") return res;
+        if (res && res.type === "await") return res;
         // process the break and continue by label
         if (res && res.type === "break") {
           if (!res.label || (res.label && res.label === options.label)) break;
@@ -505,6 +502,7 @@ function evaluate(node, scope, options = {}) {
         child.set(variable, el);
         res = evaluate.call(this, node.body, child);
         if (res && res.type === "return") return res;
+        if (res && res.type === "await") return res;
         // process the break and continue by label
         if (res && res.type === "break") {
           if (!res.label || (res.label && res.label === options.label)) break;
@@ -525,6 +523,7 @@ function evaluate(node, scope, options = {}) {
       do {
         res = evaluate.call(this, node.body, child);
         if (res && res.type === "return") return res;
+        if (res && res.type === "await") return res;
         // process the break and continue by label
         if (res && res.type === "break") {
           if (!res.label || (res.label && res.label === options.label)) break;
@@ -544,6 +543,7 @@ function evaluate(node, scope, options = {}) {
       while (evaluate.call(this, node.test, child)) {
         res = evaluate.call(this, node.body, child);
         if (res && res.type === "return") return res;
+        if (res && res.type === "await") return res;
         // process the break and continue by label
         if (res && res.type === "break") {
           if (!res.label || (res.label && res.label === options.label)) break;
@@ -569,6 +569,7 @@ function evaluate(node, scope, options = {}) {
           for (const stat of switchcase.consequent) {
             res = evaluate.call(this, stat, child);
             if (res && res.type === "return") return res;
+            if (res && res.type === "await") return res;
             if (res && res.type === "break") break;
             if (res && res.type === "continue") return res;
           }
@@ -587,7 +588,10 @@ function evaluate(node, scope, options = {}) {
         const child = new Scope("Block", scope);
         for (const stat of node.block.body) {
           res = evaluate.call(this, stat, child);
-          if (res && ["return", "break", "continue"].includes(res.type)) {
+          if (
+            res &&
+            ["return", "await", "break", "continue"].includes(res.type)
+          ) {
             return res;
           }
         }
@@ -638,17 +642,27 @@ function evaluate(node, scope, options = {}) {
     case "ThisExpression": {
       return this;
     }
+    case "YieldExpression":
+      return {
+        type: "yield",
+        value: evaluate.call(this, node.argument, scope),
+      };
+    case "AwaitExpression": {
+      return {
+        type: "await",
+        value: evaluate.call(this, node.argument, scope),
+      };
+    }
     // skip: disable in strict mode
     case "WithStatement": {
       return;
     }
     // no meaning
     case "EmptyStatement": {
-      return;
+      return { type: "Empty" };
     }
     case "DebuggerStatement":
-      return; // return { type: "debugger" };
-    // construct three special type
+      return { type: "debugger" };
     case "ContinueStatement":
       return { type: "continue", label: node.label?.name };
     case "BreakStatement":
