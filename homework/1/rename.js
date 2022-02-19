@@ -9,23 +9,23 @@ function transform(root, originName, targetName) {
     switch (node.type) {
       // 函数名
       case 'FunctionDeclaration':
-        if (node.id && node.id.name === originName)
+        if (node.id?.name === originName)
           node.id.name = targetName
         break;
       // var 声明
       case 'VariableDeclaration':
-        if (node.declarations[0].id.name === originName) {
-          node.declarations[0].id.name = targetName;
-        }
+        node.declarations.forEach(variable => {
+          if (variable.id?.name === originName) variable.id.name = targetName;
+        });
         break;
       // 对象属性
       case 'MemberExpression':
-        if (node.object && node.object.name === originName) { node.object.name = targetName }
+        if (node.object?.name === originName) { node.object.name = targetName }
         break;
       // foo + foo
       case 'BinaryExpression':
-        if (node.left && node.left.name === originName) { node.left.name = targetName }
-        if (node.right && node.right.name === originName) { node.right.name = targetName }
+        if (node.left?.name === originName) { node.left.name = targetName }
+        if (node.right?.name === originName) { node.right.name = targetName }
         break;
     }
 
