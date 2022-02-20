@@ -1,8 +1,8 @@
-const test = require('ava');
-const { Scope, customEval } = require('../../eval');
+const test = require('ava')
+const { Scope, customEval } = require('../../eval')
 
-test("VariableDeclaration-const", t => {
-  const scope = new Scope({});
+test('VariableDeclaration-const', t => {
+  const scope = new Scope({})
 
   const a = customEval(
     `
@@ -10,14 +10,14 @@ const a = 123;
 
 module.exports = a;
   `,
-    scope
-  );
+    scope,
+  )
 
-  t.deepEqual(a, 123);
-});
+  t.deepEqual(a, 123)
+})
 
-test("VariableDeclaration-let", t => {
-  const scope = new Scope({});
+test('VariableDeclaration-let', t => {
+  const scope = new Scope({})
 
   const a = customEval(
     `
@@ -25,16 +25,16 @@ let a = 123;
 
 module.exports = a;
   `,
-    scope
-  );
+    scope,
+  )
 
-  t.deepEqual(a, 123);
-});
+  t.deepEqual(a, 123)
+})
 
-test("VariableDeclaration-duplicate-let", t => {
-  const scope = new Scope({});
+test('VariableDeclaration-duplicate-let', t => {
+  const scope = new Scope({})
 
-  t.throws(function() {
+  t.throws(function () {
     customEval(
       `
 let a = 123;
@@ -43,15 +43,15 @@ let a = 321;
 
 module.exports = a;
     `,
-      scope
-    );
-  });
-});
+      scope,
+    )
+  })
+})
 
-test("VariableDeclaration-duplicate-const", t => {
-  const scope = new Scope({});
+test('VariableDeclaration-duplicate-const', t => {
+  const scope = new Scope({})
 
-  t.throws(function() {
+  t.throws(function () {
     customEval(
       `
 const a = 123;
@@ -60,45 +60,45 @@ const a = 321;
 
 module.exports = a;
     `,
-      scope
-    );
-  });
-});
+      scope,
+    )
+  })
+})
 
-test("VariableDeclaration-duplicate-with-context-let", t => {
+test('VariableDeclaration-duplicate-with-context-let', t => {
   const scope = new Scope({
-    global: "hello"
-  });
+    global: 'hello',
+  })
 
-  t.throws(function() {
+  t.throws(function () {
     customEval(
       `
 let global = "world"
 module.exports = global;
       `,
-      scope
-    );
-  });
-});
+      scope,
+    )
+  })
+})
 
-test("VariableDeclaration-duplicate-with-context-const", t => {
+test('VariableDeclaration-duplicate-with-context-const', t => {
   const scope = new Scope({
-    global: "hello"
-  });
+    global: 'hello',
+  })
 
-  t.throws(function() {
+  t.throws(function () {
     customEval(
       `
-let global = "world"
+const global = "world"
 module.exports = global;
       `,
-      scope
-    );
-  });
-});
+      scope,
+    )
+  })
+})
 
-test("VariableDeclaration-define let then cover", t => {
-  const scope = new Scope({});
+test('VariableDeclaration-define let then cover', t => {
+  const scope = new Scope({})
 
   const output = customEval(
     `
@@ -106,25 +106,25 @@ let name = "hello"
 name = "world"  // cover the name, it should throw an error
 module.exports = {name: name}
       `,
-    scope
-  );
-  t.deepEqual(output.name, "world");
-});
+    scope,
+  )
+  t.deepEqual(output.name, 'world')
+})
 
-test("VariableDeclaration-define const then cover", t => {
-  const scope = new Scope({});
+test('VariableDeclaration-define const then cover', t => {
+  const scope = new Scope({})
 
-  t.throws(function() {
+  t.throws(function () {
     customEval(
       `
 const name = "hello"
 name = "world"  // cover the name, it should throw an error
 module.exports = {name: name}
       `,
-      scope
-    );
-  });
-});
+      scope,
+    )
+  })
+})
 
 // FIXME: let and const should have block scope
 // test("block scope", t => {

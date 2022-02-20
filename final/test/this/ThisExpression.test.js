@@ -1,8 +1,8 @@
-const test = require('ava');
-const { customEval, Scope } = require('../../eval');
+const test = require('ava')
+const { customEval, Scope } = require('../../eval')
 
-test("ThisExpression", t => {
-  const scope = new Scope();
+test('ThisExpression', t => {
+  const scope = new Scope()
 
   const func = customEval(
     `
@@ -13,12 +13,12 @@ function t(){
 
 module.exports = t;
   `,
-    scope
-  );
+    scope,
+  )
 
-  const ctx = {};
+  const ctx = {}
 
-  func.call(ctx);
+  func.call(ctx)
 
-  t.deepEqual(ctx.name, "hello");
-});
+  t.deepEqual(ctx.name, 'hello')
+})

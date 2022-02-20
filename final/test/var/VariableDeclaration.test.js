@@ -1,8 +1,8 @@
-const test = require('ava');
-const { customEval, Scope } = require('../../eval');
+const test = require('ava')
+const { customEval, Scope } = require('../../eval')
 
-test("VariableDeclaration-var", t => {
-  const scope = new Scope();
+test('VariableDeclaration-var', t => {
+  const scope = new Scope()
 
   const a = customEval(
     `
@@ -10,14 +10,14 @@ var a = 123;
 
 module.exports = a;
   `,
-    scope
-  );
+    scope,
+  )
 
-  t.deepEqual(a, 123);
-});
+  t.deepEqual(a, 123)
+})
 
-test("VariableDeclaration-duplicate-var", t => {
-  const scope = new Scope();
+test('VariableDeclaration-duplicate-var', t => {
+  const scope = new Scope()
 
   const a = customEval(
     `
@@ -27,32 +27,32 @@ var a = 321;
 
 module.exports = a;
   `,
-    scope
-  );
+    scope,
+  )
 
-  t.deepEqual(a, 321);
-});
+  t.deepEqual(a, 321)
+})
 
-test("VariableDeclaration-duplicate-with-context-var", t => {
+test('VariableDeclaration-duplicate-with-context-var', t => {
   const scope = new Scope({
-    global: "hello"
-  });
+    global: 'hello',
+  })
 
   const g = customEval(
     `
 var global = "world"  // context can not be rewrite
 module.exports = global;
     `,
-    scope
-  );
+    scope,
+  )
 
-  t.deepEqual(g, "hello");
-});
+  t.deepEqual(g, 'world')
+})
 
-test("VariableDeclaration-replace-context-var", t => {
+test('VariableDeclaration-replace-context-var', t => {
   const scope = new Scope({
-    global: "hello"
-  });
+    global: 'hello',
+  })
 
   const g = customEval(
     `
@@ -62,29 +62,29 @@ function test(){
 }
 module.exports = test();
     `,
-    scope
-  );
-  t.deepEqual(g, 123);
-});
+    scope,
+  )
+  t.deepEqual(g, 123)
+})
 
-test("VariableDeclaration-define global var", t => {
+test('VariableDeclaration-define global var', t => {
   const scope = new Scope({
-    global: "hello"
-  });
+    global: 'hello',
+  })
 
   const output = customEval(
     `
 name = "axetroy"
 module.exports = {name: name, global}
     `,
-    scope
-  );
-  t.deepEqual(output.global, "hello");
-  t.deepEqual(output.name, "axetroy");
-});
+    scope,
+  )
+  t.deepEqual(output.global, 'hello')
+  t.deepEqual(output.name, 'axetroy')
+})
 
-test("VariableDeclaration-define var then cover value", t => {
-  const scope = new Scope();
+test('VariableDeclaration-define var then cover value', t => {
+  const scope = new Scope()
 
   const output = customEval(
     `
@@ -92,13 +92,13 @@ var name = "hello"
 name = "world"  // cover the name var
 module.exports = {name: name}
     `,
-    scope
-  );
-  t.deepEqual(output.name, "world");
-});
+    scope,
+  )
+  t.deepEqual(output.name, 'world')
+})
 
-test("VariableDeclaration-define global var in block scope", t => {
-  const scope = new Scope();
+test('VariableDeclaration-define global var in block scope', t => {
+  const scope = new Scope()
 
   const func = customEval(
     `
@@ -109,14 +109,14 @@ function run(){
 
 module.exports = run;
       `,
-    scope
-  );
+    scope,
+  )
 
-  t.deepEqual(func(), "world");
-});
+  t.deepEqual(func(), 'world')
+})
 
-test("VariableDeclaration-redefine global var in block scope", t => {
-  const scope = new Scope();
+test('VariableDeclaration-redefine global var in block scope', t => {
+  const scope = new Scope()
 
   const func = customEval(
     `
@@ -128,14 +128,14 @@ function run(){
 
 module.exports = run;
       `,
-    scope
-  );
+    scope,
+  )
 
-  t.deepEqual(func(), "hello");
-});
+  t.deepEqual(func(), 'hello')
+})
 
-test("VariableDeclaration-continuous-define continuous assignment", t => {
-  const scope = new Scope();
+test('VariableDeclaration-continuous-define continuous assignment', t => {
+  const scope = new Scope()
 
   const { a, b } = customEval(
     `
@@ -144,10 +144,10 @@ var b = a;
 a.x = a = {n: 1};
 module.exports = {a, b};
       `,
-    scope
-  );
+    scope,
+  )
 
-  t.deepEqual(a.n, 1);
-  t.deepEqual(b.n, 2);
-  t.deepEqual(b.x, a);
-});
+  t.deepEqual(a.n, 1)
+  t.deepEqual(b.n, 2)
+  t.deepEqual(b.x, a)
+})
