@@ -19,15 +19,15 @@ class Scope {
             let scope = this
             while (scope.parent && scope.type !== 'function') { scope = scope.parent }
             scope.variables[name] = new Value(initValue, 'var')
-            return this.variables[name]
+            return this.variables[name]?.value
         } else if (kind === 'let') {
             if (name in this.variables) { throw new SyntaxError(`Identifier ${name} has already been declared`) }
             this.variables[name] = new Value(initValue, 'let')
-            return this.variables[name]
+            return this.variables[name]?.value
         } else if (kind === 'const') {
             if (name in this.variables) { throw new SyntaxError(`Identifier ${name} has already been declared`) }
             this.variables[name] = new Value(initValue, 'const')
-            return this.variables[name]
+            return this.variables[name]?.value
         } else {
             throw new Error(`canjs: Invalid Variable Declaration Kind of "${kind}"`)
         }

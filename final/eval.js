@@ -5,12 +5,13 @@ function evaluate(node, scope, config) {
   if (!node) return
   switch (node.type) {
     case 'Program': {
-      // node.body.map(n => evaluate.call(this, n, scope))
       let ret
       for (const expression of node.body) {
+        // 函数提升
         if (expression.type === 'FunctionDeclaration')
-          scope.declare('var', expression.id.name)
+          evaluate.call(this, expression, scope)
         else if (expression.type === 'VariableDeclaration' && expression.kind === 'var')
+          // 变量提升
           expression.declarations?.forEach(d => {
             scope.declare('var', d.id.name)
           })
@@ -19,11 +20,10 @@ function evaluate(node, scope, config) {
         if (expression.type === 'BlockStatement') {
           ret = evaluate.call(this, expression, new Scope({}, scope, 'block'))
         }
-        else
+        else if (expression !== 'FunctionDeclaration')
           ret = evaluate.call(this, expression, scope)
       }
       return ret
-      // return
     }
     case 'Literal':
       return node.value;
@@ -45,6 +45,7 @@ function evaluate(node, scope, config) {
 
       if (node.left.type === 'Identifier') {
         let rightValue = evaluate.call(this, node.right, scope)
+        if (rightValue instanceof BlockInterruption) return rightValue
         // 直接给变量赋值
         if (node.operator === '=') scope.set(node.left.name, rightValue);
         else {
@@ -72,6 +73,7 @@ function evaluate(node, scope, config) {
         // 给对象的内部属性赋值
         let [leftObj, leftPropName] = evaluate.call(this, node.left, scope, { setObjPropVal: true })
         let rightValue = evaluate.call(this, node.right, scope)
+        if (rightValue instanceof BlockInterruption) return rightValue
         if (node.operator === '=') return leftObj[leftPropName] = rightValue;
         let leftValue = leftObj[leftPropName]
         let retVal;
@@ -93,7 +95,9 @@ function evaluate(node, scope, config) {
       }
     }
     case 'BlockStatement': {
-      let ret
+      // 是否异步作用域
+      const isAsyncBlock = config?.isAsyncBlock || false
+      // Hoisting
       for (const expression of node.body) {
         if (expression.type === 'FunctionDeclaration')
           // 函数提升
@@ -104,6 +108,38 @@ function evaluate(node, scope, config) {
             scope.declare('var', d.id.name)
           })
       }
+      // generator作用域
+      if (isAsyncBlock) {
+        let ret
+        for (let i in node.body) {
+          const expression = node.body[i]
+          if (expression.type === 'BlockStatement') {
+            ret = evaluate.call(this, expression, new Scope({}, scope, 'block'))
+          }
+          else if (expression !== 'FunctionDeclaration') {
+            try {
+              ret = evaluate.call(this, expression, scope)
+            } catch (e) {
+              if (e instanceof BlockInterruption) {
+                // 删除已执行的代码从本段开始
+                node.body = node.body.slice(i)
+                // 将next()中的参数传入
+                e.value.nextArg(config?.arg)
+                return e;
+              }
+              // 其他错误
+              console.error(e)
+            }
+          }
+          if (ret instanceof BlockInterruption && ret.getType() === 'return') {
+            node.body.length = 0
+            return ret;
+          }
+        }
+        return ret
+      }
+      // 普通作用域
+      let ret
       for (const expression of node.body) {
         if (expression.type === 'BlockStatement') {
           ret = evaluate.call(this, expression, new Scope({}, scope, 'block'))
@@ -115,6 +151,31 @@ function evaluate(node, scope, config) {
       return ret
     }
     case 'FunctionDeclaration': {
+      //generator函数
+      if (node.generator) {
+        const generator = function (...args) {
+          const generatorScope = new Scope({}, scope, 'function')
+          node.params.forEach((param, i) => {
+            generatorScope.declare('let', param.name, args[i])
+          })
+          return {
+            [Symbol.toStringTag]: 'Generator',
+            next(arg) {
+              let ret = evaluate.call(this, node.body, generatorScope, { isAsyncBlock: true, arg })
+              if (ret?.getType() === 'return') return { value: ret.value, done: true }
+              else if (ret?.getType() === 'yield') return { value: ret.value.value, done: false }
+              return { value: undefined, done: true }
+            },
+            return(value) {
+              node.body.body = []
+              return { value, done: true }
+            }
+          }
+        }
+        generator[Symbol.toStringTag] = 'GeneratorFunction'
+        return scope.declare('var', node.id.name, generator)
+      }
+      // async函数
       if (node.async) {
         const asyncFun = function (...args) {
           return new Promise(function (resolve, reject) {
@@ -128,6 +189,9 @@ function evaluate(node, scope, config) {
           })
         }
         return scope.declare('var', node.id.name, asyncFun)
+      }
+      if (node.async && node.generator) {
+        //这位更是重量级（摆了）
       }
       // 命名函数
       const fun = function (...args) {
@@ -153,9 +217,11 @@ function evaluate(node, scope, config) {
     }
     // 变量声明
     case 'VariableDeclaration': {
-      return node.declarations.forEach(v => {
-        return scope.declare(node.kind, v.id.name, evaluate.call(this, v.init, scope))
+      let ret
+      node.declarations.forEach(v => {
+        ret = scope.declare(node.kind, v.id.name, evaluate.call(this, v.init, scope))
       })
+      return ret
     }
     // If
     case 'IfStatement': {
@@ -476,7 +542,6 @@ function evaluate(node, scope, config) {
         }
         ret = callee.apply(this, node.arguments.map(arg => evaluate.call(this, arg, scope)))
       }
-      // ret = fun(...node.arguments.map(arg => evaluate.call(this, arg, scope)));
       return ret instanceof BlockInterruption ? ret.value : ret
     }
     // 普通函数
@@ -493,7 +558,6 @@ function evaluate(node, scope, config) {
       if (node.id !== null) {
         scope.declare('var', node.id.name, fun)
       }
-      // fun.toString = () => srcCode.substring(node.start, node.end)
       Object.defineProperty(fun, 'name', {
         get() {
           return node.id?.name
@@ -566,7 +630,6 @@ function evaluate(node, scope, config) {
       if (callee.name in globalThis && globalThis[callee.name] === callee) return new callee(...args)
       // 构造原型链模拟new
       const o = Object.create(callee.prototype)
-      // o.toString = () => { return `[object ${node.callee.name}]` }
       const k = callee.apply(o, args)
       return k instanceof Object ? k : o
     }
@@ -583,10 +646,16 @@ function evaluate(node, scope, config) {
       return ret instanceof Promise ? ret : new Promise(function (res) { res(ret) })
     }
     case 'YieldExpression': {
-      return
+      if (node.hasComplete) return node.nextArg;
+      let ret = evaluate.call(this, node.argument, scope)
+      node.hasComplete = true;
+      // value:ret yield的值 nextArg : 返回值
+      throw new BlockInterruption('yield', {
+        value: ret, nextArg: (nextArg) => { node.nextArg = nextArg }
+      })
     }
   }
-  console.log(node)
+  console.error('未实现功能:\n AST: \n', node)
   throw new Error(`Unsupported Syntax ${node.type} at Location ${node.start}:${node.end}`);
 }
 
@@ -599,7 +668,8 @@ function customEval(code, parent) {
   }, parent);
 
   const node = acorn.parse(code, {
-    ecmaVersion: 2017
+    ecmaVersion: 2017,
+
   })
   evaluate(node, scope);
 
