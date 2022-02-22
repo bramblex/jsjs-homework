@@ -74,7 +74,7 @@ class Value {
 
 class BlockInterruption {
     constructor(type, value) {
-        this.type = type
+        this.type = type // 'return' | 'continue' | 'break' | 'yield'
         this.value = value
     }
     getType() {

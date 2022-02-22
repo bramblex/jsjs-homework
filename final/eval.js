@@ -1,6 +1,6 @@
 const acorn = require('acorn');
 const { Scope, BlockInterruption } = require('./scope')
-
+let srcCode
 function evaluate(node, scope, config) {
   if (!node) return
   switch (node.type) {
@@ -183,9 +183,14 @@ function evaluate(node, scope, config) {
             node.params.forEach((param, i) => {
               nodeScope.declare('let', param.name, args[i])
             })
-            let ret = evaluate.call(this, node.body, nodeScope);
-            if (ret instanceof BlockInterruption && ret.getType() === 'return') return resolve(ret.value)
-            resolve(ret)
+            try {
+              let ret = evaluate.call(this, node.body, nodeScope);
+              if (ret instanceof BlockInterruption && ret.getType() === 'return') return resolve(ret.value)
+              resolve(ret)
+            } catch (err) {
+              reject(err)
+            }
+
           })
         }
         return scope.declare('var', node.id.name, asyncFun)
@@ -634,7 +639,7 @@ function evaluate(node, scope, config) {
       return k instanceof Object ? k : o
     }
     case 'ThisExpression': {
-      return this
+      return this !== globalThis ? this : undefined
     }
     // new.target指向
     case 'MetaProperty': {
@@ -659,13 +664,9 @@ function evaluate(node, scope, config) {
   throw new Error(`Unsupported Syntax ${node.type} at Location ${node.start}:${node.end}`);
 }
 
-function customEval(code, parent) {
-
-  const scope = new Scope({
-    module: {
-      exports: {}
-    }
-  }, parent);
+function customEval(code, scope) {
+  srcCode = code
+  scope.declare('const', 'module', { export: {} })
 
   const node = acorn.parse(code, {
     ecmaVersion: 2017,
