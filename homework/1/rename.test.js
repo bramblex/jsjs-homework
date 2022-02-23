@@ -1,6 +1,17 @@
+/*
+ * @Author: vecpeng
+ * @Date: 2022-02-23 20:56:03
+ * @LastEditors: vecpeng
+ * @LastEditTime: 2022-02-23 20:56:22
+ * @FilePath: /jsjs-homework/homework/1/rename.test.js
+ * @Desc: 
+ * 
+ * Copyright (c) 2022 by vecpeng, All Rights Reserved. 
+ */
 const acorn = require('acorn');
 const traverse = require('../../common/traverse')
 const rename = require('./rename')
+const test = require('ava')
 
 function toStandard(code) {
   const root = acorn.parse(code, { ecmaVersion: 5 })
@@ -14,7 +25,7 @@ function toStandard(code) {
   return target
 }
 
-test('测试重命名变量', () => {
+test('测试重命名变量', t => {
   const sourceCode = `
 function foo() {
 	foo: while(true) {
@@ -38,5 +49,6 @@ function bar() {
 `;
 
   const result = rename(sourceCode, 'foo', 'bar');
-  expect(toStandard(result)).toStrictEqual(toStandard(targetCode));
+
+  t.deepEqual(toStandard(result), toStandard(targetCode))
 })
