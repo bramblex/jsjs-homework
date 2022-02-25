@@ -1,3 +1,8 @@
+/**
+ * 同步执行生成器直到 return
+ * @param {Generator} generator 生成器
+ * @returns 包装函数
+ */
 exports.asyncToGenerator = function (generator) {
   return function () {
     let that = this;
@@ -27,6 +32,24 @@ exports.asyncToGenerator = function (generator) {
     });
   };
 };
+
+/**
+ * 修改对象 obj 上的不可变变量
+ * @param {Object} obj
+ * @param {String} prop
+ * @param {String} val
+ */
+exports.setObjProperty = function (obj, prop, val) {
+  Object.defineProperty(obj, prop, {
+    get() {
+      return val;
+    },
+  });
+};
+
+/**
+ * class MyPromise 手写Promise，暂未用上
+ * */
 
 const PENDING = "pending";
 const FULFILLED = "fulfilled";
