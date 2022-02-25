@@ -1,9 +1,9 @@
-const test = require('ava');
-const { Scope, customEval } = require('../../eval');
+const test = require("ava");
+const { Scope, customEval } = require("../../eval");
 
-test("ArrowFunctionExpression-1", t => {
+test("ArrowFunctionExpression-1", (t) => {
   const scope = new Scope({
-    name: "world"
+    name: "world",
   });
 
   const func = customEval(
@@ -22,7 +22,7 @@ module.exports = func;
   t.deepEqual(func(), "hello world");
 });
 
-test("ArrowFunctionExpression-2", t => {
+test("ArrowFunctionExpression-2", (t) => {
   const scope = new Scope();
 
   const func = customEval(
@@ -36,11 +36,11 @@ module.exports = func;
 
   t.true(typeof func === "function");
   t.deepEqual(func.length, 0);
-  t.deepEqual(func.name, "");
+  t.deepEqual(func.name, "func");
   t.deepEqual(func(), "hello undefined");
 });
 
-test("ArrowFunctionExpression-3", t => {
+test("ArrowFunctionExpression-3", (t) => {
   const scope = new Scope();
 
   const func = customEval(
