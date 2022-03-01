@@ -39,6 +39,5 @@ function bar() {
 `;
 
   const result = rename(sourceCode, 'foo', 'bar');
-
   t.deepEqual(toStandard(result), toStandard(targetCode))
 })
