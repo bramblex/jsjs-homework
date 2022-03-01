@@ -101,4 +101,5 @@ function customerEval(code, env = {}) {
   return evaluate(node, env)
 }
 
+const test = customerEval('(()=> {return 1})()')
 module.exports = customerEval
