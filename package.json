@@ -7,13 +7,15 @@
   "license": "MIT",
   "dependencies": {
     "acorn": "^8.7.0",
+    "acorn-bigint": "^1.0.0",
+    "acorn-jsx": "^5.3.2",
     "astring": "^1.8.1",
     "ava": "^4.0.1"
   },
   "scripts": {
     "test-final": "ava final/test",
     "test-homework-1": "ava homework/1/rename.test.js",
-    "test-homework-2": "ava homework/2/eval.test.js",  
+    "test-homework-2": "ava homework/2/eval.test.js",
     "test-homework-3": "ava homework/3/eval.test.js"
   }
 }
