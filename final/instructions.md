@@ -1,5 +1,7 @@
 # js-interpreter
 
+> 更详细的说明见文章：[你好，JS 解释器](https://juejin.cn/post/7071265417196470280)
+
 ## 语法树 AST
 
 > 在生成语法树前，需要先进行分词 `Token`
