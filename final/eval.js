@@ -124,8 +124,6 @@ function* evaluate(node, scope, config) {
       }
     }
     case 'BlockStatement': {
-      // 是否异步作用域
-      const isAsyncBlock = config?.isAsyncBlock || false
       // Hoisting
       for (const expression of node.body) {
         if (expression.type === 'FunctionDeclaration') {
@@ -139,34 +137,6 @@ function* evaluate(node, scope, config) {
           expression.declarations?.forEach(d => {
             scope.declare('var', d.id.name)
           })
-      }
-      // generator作用域
-      if (isAsyncBlock) {
-        let ret
-        for (let i in node.body) {
-          const expression = node.body[i]
-          if (expression.type === 'BlockStatement') {
-            const g = evaluate.call(this, expression, new Scope({}, scope, 'block'))
-            let r = g.next()
-            while (!r.done) r = g.next(yield r.value)
-            ret = r.value
-          }
-          else if (expression !== 'FunctionDeclaration') {
-            const g = evaluate.call(this, expression, scope)
-            let r = g.next()
-            while (!r.done) r = g.next(yield r.value)
-            ret = r.value
-          }
-          if (ret instanceof BlockInterruption && ret.getType() === 'return') {
-            node.body.length = 0
-            return ret;
-          }
-          if (ret instanceof BlockInterruption && ret.getType() === 'yield') {
-            yield ret.value;
-            ret = ret.value
-          }
-        }
-        return
       }
       // 普通作用域
       let ret
@@ -187,15 +157,16 @@ function* evaluate(node, scope, config) {
       }
       return ret
     }
+    // 函数声明
     case 'FunctionDeclaration': {
       //generator函数
-      if (node.generator) {
+      if (node.generator && !node.async) {
         const generator = function (...args) {
           const generatorScope = new Scope({}, scope, 'function')
           node.params.forEach((param, i) => {
             generatorScope.declare('let', param.name, args[i])
           })
-          const g = evaluate.call(this, node.body, generatorScope, { isAsyncBlock: true })
+          const g = evaluate.call(this, node.body, generatorScope)
           return {
             [Symbol.toStringTag]: 'Generator',
             next(arg) {
@@ -214,7 +185,8 @@ function* evaluate(node, scope, config) {
         return scope.declare('var', node.id.name, generator)
       }
       // async函数
-      if (node.async) {
+      if (node.async && !node.generator) {
+        // setTimeout特性：在当前程序完成之后再开始计时，冗余程序可能会阻塞计时
         const asyncFun = function (...args) {
           return new Promise(function (resolve, reject) {
             const nodeScope = new Scope({}, scope, 'function')
@@ -223,21 +195,31 @@ function* evaluate(node, scope, config) {
             })
             try {
               const g = evaluate.call(this, node.body, nodeScope);
-              let ret = g.next().value
-              if (ret instanceof BlockInterruption && ret.getType() === 'return') return resolve(ret.value)
-              resolve(ret)
+              const handler = (res) => {
+                let r = g.next(res)
+                if (r.done) {
+                  let ret = r.value
+                  if (ret instanceof BlockInterruption && ret.getType() === 'return')
+                    resolve(ret.value)
+                  else
+                    resolve(ret)
+                } else {
+                  r.value.then(handler)
+                }
+              }
+              handler()
             } catch (err) {
               reject(err)
             }
-
           })
         }
         return scope.declare('var', node.id.name, asyncFun)
       }
       if (node.async && node.generator) {
         //这位更是重量级（摆了）
+        throw new Error('开摆')
       }
-      // 命名函数
+      // 普通函数
       const fun = function (...args) {
         const nodeScope = new Scope({}, scope, 'function')
         node.params.forEach((param, i) => {
@@ -787,29 +769,64 @@ function* evaluate(node, scope, config) {
     }
     // 普通函数
     case 'FunctionExpression': {
-      const commonfun = function (...args) {
-        const funScope = new Scope({}, scope, 'function')
-        node.params.forEach((param, i) => {
-          funScope.declare('let', param.name, args[i])
-        })
-        const g = evaluate.call(this, node.body, funScope);
-        let ret = g.next().value
-        if (ret instanceof BlockInterruption && ret.getType() === 'return') return ret.value
-        return undefined
+      let fun
+      if (!node.async && !node.generator) {
+        // 普通函数
+        fun = function (...args) {
+          const funScope = new Scope({}, scope, 'function')
+          node.params.forEach((param, i) => {
+            funScope.declare('let', param.name, args[i])
+          })
+          const g = evaluate.call(this, node.body, funScope);
+          let ret = g.next().value
+          if (ret instanceof BlockInterruption && ret.getType() === 'return') return ret.value
+          return undefined
+        }
+      } else if (!node.async && node.generator) {
+        // generator函数
+        fun = function* (...args) {
+          const funScope = new Scope({}, scope, 'function')
+          node.params.forEach((param, i) => {
+            funScope.declare('let', param.name, args[i])
+          })
+          const g = evaluate.call(this, node.body, funScope);
+          let r = g.next()
+          while (!r.done) r = g.next(yield r.value)
+          let ret = g.next().value
+          if (ret instanceof BlockInterruption && ret.getType() === 'return') return ret.value
+          return undefined
+        }
+      } else if (node.async && !node.generator) {
+        // async函数
+        fun = function (...args) {
+          return new Promise(function (resolve, reject) {
+            const nodeScope = new Scope({}, scope, 'function')
+            node.params.forEach((param, i) => {
+              nodeScope.declare('let', param.name, args[i])
+            })
+            try {
+              const g = evaluate.call(this, node.body, nodeScope);
+              const handler = (res) => {
+                let r = g.next(res)
+                if (r.done) {
+                  let ret = r.value
+                  if (ret instanceof BlockInterruption && ret.getType() === 'return')
+                    resolve(ret.value)
+                  else
+                    resolve(ret)
+                } else {
+                  r.value.then(handler)
+                }
+              }
+              handler()
+            } catch (err) {
+              reject(err)
+            }
+          })
+        }
+      } else if (node.async && node.generator) {
+        throw new Error('开摆')
       }
-      const generator = function* (...args) {
-        const funScope = new Scope({}, scope, 'function')
-        node.params.forEach((param, i) => {
-          funScope.declare('let', param.name, args[i])
-        })
-        const g = evaluate.call(this, node.body, funScope);
-        let r = g.next()
-        while (!r.done) r = g.next(yield r.value)
-        let ret = g.next().value
-        if (ret instanceof BlockInterruption && ret.getType() === 'return') return ret.value
-        return undefined
-      }
-      const fun = node.generator ? generator : commonfun
       if (node.id !== null) {
         scope.declare('var', node.id.name, fun)
       }
@@ -827,16 +844,47 @@ function* evaluate(node, scope, config) {
     }
     // 箭头函数
     case 'ArrowFunctionExpression': {
-      const fun = (...args) => {
-        const funScope = new Scope({}, scope, 'function')
-        node.params.forEach((param, i) => {
-          funScope.declare('let', param.name, args[i])
-        })
-        const g = evaluate.call(this, node.body, funScope);
-        let ret = g.next().value
-        if (node.async) return new Promise(ret)
-        if (ret instanceof BlockInterruption && ret.getType() === 'return') return ret.value
-        return ret
+      let fun
+      if (!node.async) {
+        fun = (...args) => {
+          const funScope = new Scope({}, scope, 'function')
+          node.params.forEach((param, i) => {
+            funScope.declare('let', param.name, args[i])
+          })
+          const g = evaluate.call(this, node.body, funScope);
+          let ret = g.next().value
+          if (node.async) return new Promise(ret)
+          if (ret instanceof BlockInterruption && ret.getType() === 'return') return ret.value
+          return ret
+        }
+      } else {
+        // async箭头函数 
+        fun = (...args) => {
+          return new Promise(function (resolve, reject) {
+            const nodeScope = new Scope({}, scope, 'function')
+            node.params.forEach((param, i) => {
+              nodeScope.declare('let', param.name, args[i])
+            })
+            try {
+              const g = evaluate.call(this, node.body, nodeScope);
+              const handler = (res) => {
+                let r = g.next(res)
+                if (r.done) {
+                  let ret = r.value
+                  if (ret instanceof BlockInterruption && ret.getType() === 'return')
+                    resolve(ret.value)
+                  else
+                    resolve(ret)
+                } else {
+                  r.value.then(handler)
+                }
+              }
+              handler()
+            } catch (err) {
+              reject(err)
+            }
+          })
+        }
       }
       Object.defineProperty(fun, 'name', {
         get() {
@@ -931,7 +979,7 @@ function* evaluate(node, scope, config) {
     }
     case 'AwaitExpression': {
       const ret = evaluate.call(this, node.argument, scope).next().value
-      return ret instanceof Promise ? ret : new Promise(function (res) { res(ret) })
+      return yield ret instanceof Promise ? ret : Promise.resolve(ret)
     }
     case 'YieldExpression': {
       const g = evaluate.call(this, node.argument, scope)
