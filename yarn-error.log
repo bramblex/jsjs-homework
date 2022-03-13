@@ -1,0 +1,52 @@
+Arguments: 
+  C:\Program Files\nodejs\node.exe C:\Users\hlscy\AppData\Roaming\npm\node_modules\yarn\bin\yarn.js test
+
+PATH: 
+  C:\ProgramData\Anaconda3;C:\ProgramData\Anaconda3\Library\mingw-w64\bin;C:\ProgramData\Anaconda3\Library\usr\bin;C:\ProgramData\Anaconda3\Library\bin;C:\ProgramData\Anaconda3\Scripts;C:\Program Files\Python36\Scripts\;C:\Program Files\Python36\;C:\Program Files (x86)\Common Files\Oracle\Java\javapath;C:\ProgramData\Oracle\Java\javapath;C:\Program Files (x86)\MiKTeX 2.9\miktex\bin;C:\Program Files\MATLAB\R2015b\runtime\win64;C:\Program Files\MATLAB\R2015b\bin;C:\Program Files\MATLAB\R2015b\polyspace\bin;C:\Program Files\Common Files\Autodesk Shared\;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\Program Files\Java\jdk1.8.0_102\bin;C:\Program Files\Java\jdk1.8.0_102\jre\bin;C:\WINDOWSSystem32;C:\WINDOWS;C:\WINDOWSsystem32WBEM;C:\Program Files (x86)\Microsoft SQL Server\90\Tools\binn\;C:\opencv2.4.10\opencv\build\x64\vc12\bin;F:\PCL_1.8.1\3rdParty\flann_1.8.4\bin;F:\PCL_1.8.1\3rdParty\qhull_2015.2\bin;F:\PCL_1.8.1\3rdParty\VTK_8.0.0\bin;C:\Users\hlscy\.gradle\wrapper\dists\gradle-4.4-all\9br9xq1tocpiv8o6njlyu5op1\gradle-4.4\bin;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\doxygen\bin;C:\Program Files (x86)\GtkSharp\2.12\bin;C:\Program Files\Intel\WiFi\bin\;C:\Program Files\Common Files\Intel\WirelessCommon\;C:\Program Files\JetBrains\GoLand 2019.3.1\go1.13.5\go\bin;C:\MinGW\bin;C:\Users\hlscy\Desktop\intern\odps_clt_release_64\bin;C:\Program Files (x86)\Git\cmd;E:\program files\bin;C:\Program Files\nodejs\;C:\Cocos\Cocos2d-x\Cocos2d-x-3.10\templates;C:\Cocos\Cocos2d-x\Cocos2d-x-3.10\tools\cocos2d-console\bin;C:\Users\hlscy\AppData\Local\Microsoft\WindowsApps;C:\dev\CGAL-4.11\auxiliary\gmp\lib;C:\Users\hlscy\AppData\Local\Pandoc\;C:\Users\hlscy\AppData\Local\BypassRuntm;C:\Users\hlscy\AppData\Local\Microsoft\WindowsApps;C:\Program Files\JetBrains\GoLand 2019.3.1\bin;;C:\Users\hlscy\AppData\Local\Programs\Microsoft Code OSS\bin;C:\Users\hlscy\AppData\Local\Programs\Microsoft VS Code Insiders\bin;C:\Users\hlscy\AppData\Roaming\npm
+
+Yarn version: 
+  1.22.17
+
+Node version: 
+  14.17.5
+
+Platform: 
+  win32 x64
+
+Trace: 
+  SyntaxError: C:\Users\hlscy\Desktop\BD-learning\jsjs-homework\package.json: Unexpected token } in JSON at position 620
+      at JSON.parse (<anonymous>)
+      at C:\Users\hlscy\AppData\Roaming\npm\node_modules\yarn\lib\cli.js:1625:59
+      at Generator.next (<anonymous>)
+      at step (C:\Users\hlscy\AppData\Roaming\npm\node_modules\yarn\lib\cli.js:310:30)
+      at C:\Users\hlscy\AppData\Roaming\npm\node_modules\yarn\lib\cli.js:321:13
+
+npm manifest: 
+  {
+    "name": "jsjs-homework",
+    "version": "1.0.0",
+    "main": "index.js",
+    "repository": "https://github.com/bramblex/jsjs-homework.git",
+    "author": "qiaojian <qiaojian.brambles@bytedance.com>",
+    "license": "MIT",
+    "dependencies": {
+      "acorn": "^8.7.0",
+      "astring": "^1.8.1",
+      "jest": "^27.4.7",
+      "yarn": "^1.22.17",
+      "ava": "^4.0.1"
+    },
+    "scripts": {
+      "test-final": "ava final/test",
+      "test-homework-1": "ava homework/1/rename.test.js",
+      "test-homework-2": "ava homework/2/eval.test.js",
+      "test-homework-3": "ava homework/3/eval.test.js",
+      "test": "ava homework/3/testErrorType.js",
+    }
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile
