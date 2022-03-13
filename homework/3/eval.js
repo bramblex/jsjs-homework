@@ -1,6 +1,7 @@
 const acorn = require("acorn");
 const Scope = require("./scope");
 const InterruptBlock = require("./interruptBlock");
+const { isReturn } = require("./interruptBlock");
 
 /**
  * 实现完整的ES5解释器
@@ -87,6 +88,8 @@ function evaluate(node, scope) {
           return left < right;
         case "===":
           return left === right;
+        case "+":
+          return left + right;
       }
     }
     case "ReturnStatement": {
@@ -155,7 +158,6 @@ function evaluate(node, scope) {
               return res;
             }
           } else if (res.type === "return") {
-            console.log("res.value: ", res.value);
             return res.value;
           }
         }
@@ -171,26 +173,93 @@ function evaluate(node, scope) {
       return;
     }
     case "AssignmentExpression": {
-      let leftVal = evaluate(node.left, scope);
       let rightVal = evaluate(node.right, scope);
-      switch (node.operator) {
-        case "+=":
-          scope.set(node.left.name, leftVal + rightVal);
-          break;
-        case "*=":
-          scope.set(node.left.name, leftVal * rightVal);
-          break;
-        case "=":
-          scope.set(node.left.name, rightVal);
-          break;
-        default:
-          break;
+      if (node.left.type === "Identifier") {
+        let leftVal = evaluate(node.left, scope);
+        switch (node.operator) {
+          case "+=":
+            scope.set(node.left.name, leftVal + rightVal);
+            break;
+          case "*=":
+            scope.set(node.left.name, leftVal * rightVal);
+            break;
+          case "=":
+            scope.set(node.left.name, rightVal);
+            break;
+          default:
+            break;
+        }
+        return scope.get(node.left.name);
+      } else if (node.left.type === "MemberExpression") {
+        let [obj, proName] = evaluate(node.left, scope);
+        switch (node.operator) {
+          case "=":
+            obj[proName] = rightVal;
+            break;
+          default:
+            break;
+        }
+        return obj;
       }
-      return;
     }
     case "LabeledStatement": {
       scope.label = node.label.name;
       return evaluate(node.body, scope);
+    }
+    case "ObjectExpression": {
+      let resObj = {};
+      for (const pro of node.properties) {
+        resObj[pro.key.name] = evaluate(pro.value, scope);
+      }
+      return resObj;
+    }
+    case "TryStatement": {
+      try {
+        const tryScope = new Scope("Block", scope);
+        evaluate(node.block, tryScope);
+      } catch (err) {
+        const catchScope = new Scope("Block", scope);
+        catchScope.declare("let", node.handler.param.name, err);
+        return evaluate(node.handler.body, catchScope);
+      } finally {
+        const finallyScope = new Scope("Block", scope);
+        return evaluate(node.finalizer, finallyScope);
+      }
+    }
+    case "ThrowStatement": {
+      throw evaluate(node.argument, scope);
+    }
+    case "MemberExpression": {
+      let obj = scope.get(node.object.name);
+      let proName = node.computed
+        ? evaluate(node.property, scope)
+        : node.property.name;
+      return [obj, proName];
+    }
+    case "SwitchStatement": {
+      let res;
+      node.cases.forEach((c) => {
+        if (evaluate(c.test, scope) === evaluate(node.discriminant, scope)) {
+          c.consequent.forEach((s) => {
+            res = evaluate(s, scope);
+          });
+        } else {
+          return null;
+        }
+      });
+      return res;
+    }
+    case "FunctionExpression": {
+      return function (...args) {
+        let functionScope = new Scope("Function", scope);
+        node.params.forEach((p, index) => {
+          functionScope.declare("let", p.name, args[index]);
+        });
+        return evaluate(node.body, functionScope);
+      };
+    }
+    case "ArrayExpression": {
+      return node.elements;
     }
   }
 
