@@ -1,7 +1,6 @@
 const acorn = require("acorn");
 const Scope = require("./scope");
 const InterruptBlock = require("./interruptBlock");
-const { isReturn } = require("./interruptBlock");
 
 /**
  * 实现完整的ES5解释器
@@ -90,16 +89,18 @@ function evaluate(node, scope) {
           return left === right;
         case "+":
           return left + right;
+        case "%":
+          return left % right;
       }
     }
     case "ReturnStatement": {
       return new InterruptBlock("return", evaluate(node.argument, scope));
     }
     case "BreakStatement": {
-      return new InterruptBlock("break");
+      return new InterruptBlock("break", node.label?.name);
     }
     case "ContinueStatement": {
-      return new InterruptBlock("continue");
+      return new InterruptBlock("continue", node.label?.name);
     }
     case "ForStatement": {
       // 循环定义索引的作用域
@@ -116,7 +117,7 @@ function evaluate(node, scope) {
         res = evaluate(node.body, forInScope);
         if (res?.type) {
           if (res.type === "continue") {
-            if (!res?.label || res?.label === label) {
+            if (!res?.value || res?.value === label) {
               continue;
             } else {
               return res;
@@ -124,7 +125,7 @@ function evaluate(node, scope) {
           }
 
           if (res.type === "break") {
-            if (!res?.label || res?.label === label) {
+            if (!res?.value || res?.value === label) {
               break;
             } else {
               return res;
