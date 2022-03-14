@@ -8,12 +8,15 @@
   "dependencies": {
     "acorn": "^8.7.0",
     "astring": "^1.8.1",
+    "jest": "^27.4.7",
+    "yarn": "^1.22.17",
     "ava": "^4.0.1"
   },
   "scripts": {
     "test-final": "ava final/test",
     "test-homework-1": "ava homework/1/rename.test.js",
-    "test-homework-2": "ava homework/2/eval.test.js",  
-    "test-homework-3": "ava homework/3/eval.test.js"
+    "test-homework-2": "ava homework/2/eval.test.js",
+    "test-homework-3": "ava homework/3/eval.test.js",
+    "test": "ava homework/3/testErrorType.js"
   }
 }
