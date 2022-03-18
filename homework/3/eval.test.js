@@ -2,7 +2,7 @@
  * @Author: vecpeng
  * @Date: 2022-02-23 20:56:03
  * @LastEditors: vecpeng
- * @LastEditTime: 2022-03-19 00:36:43
+ * @LastEditTime: 2022-03-19 01:52:33
  * @FilePath: /jsjs-homework/homework/3/eval.test.js
  * @Desc: 
  * 
@@ -21,7 +21,7 @@ test('控制流 - 初级挑战', t => {
   const sourceCodeList = [
     '(() => { let a = 3; if (a > 0) { return 1 } else { return 0 } })()',
     '(() => { let sum = 0; for (let i = 0; i < 10; i++) { sum += i } return sum })()',
-    // '(() => { let factorial = 1; let i = 0; while (i < 10) { factorial *= i; i++; } return factorial })()',
+    '(() => { let factorial = 1; let i = 0; while (i < 10) { factorial *= i; i++; } return factorial })()',
   ]
   for (sourceCode of sourceCodeList) {
     t.deepEqual(customerEval(sourceCode, baseEnv), eval(sourceCode))

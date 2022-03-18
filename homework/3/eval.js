@@ -1,7 +1,6 @@
 const acorn = require('acorn');
 
 function evaluate(node, env) {
-  console.log(node.type, node.value)
   switch (node.type) {
     case 'Literal':
       return node.value;
@@ -74,9 +73,9 @@ function evaluate(node, env) {
   throw new Error(`Unsupported Syntax ${node.type} at Location ${node.start}:${node.end}`);
 }
 
+// 解析{}中的代码
 function evaluateBody(body, env) {
   for (const statement of body) {
-    console.log(statement)
     const result = evaluateStatement(statement, env)
     if (result) {
       return result;
@@ -86,11 +85,28 @@ function evaluateBody(body, env) {
 }
 function evaluateStatement(statement, env) {
   switch (statement.type) {
+    case 'ExpressionStatement':
+      return evaluateStatement(statement.expression, env);
     case 'VariableDeclaration':
       for (const declaration of statement.declarations) {
         env[declaration.id.name] = evaluate(declaration.init, env);
       }
       break;
+    case 'AssignmentExpression':
+      switch (statement.operator) {
+        case '+=':
+          const left = evaluate(statement.left, env);
+          const right = evaluate(statement.right, env);
+          console.log(left, right);
+          env[statement.left.name] += right;
+      }
+      return;
+    case 'UpdateExpression':
+      switch (statement.operator) {
+        case '++':
+          env[statement.argument.name]++;
+      }
+      return;
     case 'IfStatement':
       if (statement.test) {
         return evaluateBody(statement.consequent.body, env);
@@ -99,11 +115,13 @@ function evaluateStatement(statement, env) {
       }
     case 'ForStatement':
       evaluateStatement(statement.init, env);
-      if (evaluate(statement.test, env)) {
-          if (evaluateBody(statement.body, env)) {
-
-          }
+      while(evaluate(statement.test, env)) {
+        evaluateStatement(statement.body.body[0], env);
+        evaluateStatement(statement.update, env);
+        console.log("env i: ", env['i']);
+        console.log("env sum: ", env['sum']);
       }
+      return;
     case 'ReturnStatement':
       return evaluate(statement.argument, env);
   }
