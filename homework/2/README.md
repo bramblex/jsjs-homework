@@ -3,7 +3,7 @@
 ## 作业要求：
 1. `npm install` 安装依赖；
 2. 补全 `eval.js` 里面的代码中的 `evaluate(node, env)` 函数，使其能将传入的表达式 AST 节点运算出结果；
-3. `yarn test-homework-2` 可以执行本作业的测试用例，是作业通过 `eval.test.js` 中的测试用例 ；
+3. `yarn test-homework-2` 可以执行本作业的测试用例，是作业通过 `eval.test2.js` 中的测试用例 ；
 
 ## 思考题：
 1. 平时说的作用域，闭包在计算机眼里都是什么？
