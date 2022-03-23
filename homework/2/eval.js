@@ -1,5 +1,6 @@
 const acorn = require('acorn');
 
+// 查找某变量所在的父级环境
 function findEnv(name, env) {
   return env[name] ? env : env.fa && findEnv(name, env.fa);
 }
