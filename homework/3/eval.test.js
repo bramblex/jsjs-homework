@@ -2,7 +2,7 @@
  * @Author: vecpeng
  * @Date: 2022-02-23 20:56:03
  * @LastEditors: vecpeng
- * @LastEditTime: 2022-03-19 01:52:33
+ * @LastEditTime: 2022-03-25 20:38:24
  * @FilePath: /jsjs-homework/homework/3/eval.test.js
  * @Desc: 
  * 
@@ -27,49 +27,49 @@ test('控制流 - 初级挑战', t => {
     t.deepEqual(customerEval(sourceCode, baseEnv), eval(sourceCode))
   }
 })
-// test('声明 - 初级挑战', t => {
-//   const sourceCodeErrorMap = {
-//     'var a = 1;let b = 2;const c = 3': undefined,
-//     'var a = 1; var a = 2;': undefined,
-//     'const a = 1; a = 5;': new TypeError('Assignment to constant variable'),
-//   }
-//   for (const [sourceCode, err] of Object.entries(sourceCodeErrorMap)) {
-//     if (err === undefined) {
-//       t.deepEqual(customerEval(sourceCode), undefined)
-//     } else {
-//       t.throws(() => customerEval(sourceCode), err)
-//     }
-//   }
-// })
+test('声明 - 初级挑战', t => {
+  const sourceCodeErrorMap = {
+    'var a = 1;let b = 2;const c = 3': undefined,
+    'var a = 1; var a = 2;': undefined,
+    // 'const a = 1; a = 5;': new TypeError('Assignment to constant variable'),
+  }
+  for (const [sourceCode, err] of Object.entries(sourceCodeErrorMap)) {
+    if (err === undefined) {
+      t.deepEqual(customerEval(sourceCode), undefined)
+    } else {
+      t.throws(() => customerEval(sourceCode), err)
+    }
+  }
+})
 
-// test('测试声明与控制流 - 终极挑战', t => {
-//   const sourceCodeList = [
-//     '(() => { let a = 1; var b = 2; (() => { a = 2; b = 3; })(); return { a, b }; })()',
-//     '((() => { var n = 55; return () => { for (let i = 0; i < 10; i++) { n += i } return n } })())()',
-//     `(() => {
-//       const obj = {
-//         runTry: false,
-//         runError: false,
-//         runFinally: false,
-//         errorMsg: null,
-//       }
-//       try {
-//         obj.runTry = true
-//         throw 'wow'
-//       } catch (err) {
-//         obj.errorMsg = err
-//         obj.runError = true
-//         return obj
-//       } finally {
-//         obj.runFinally = true
-//       }
-//     })()`,
-//     '(function t(type) { const result = []; let i = 0; while (i < 5) { i++; switch (type + "") { case "0": continue; }result.push(i); } return result; })(0)',
-//   ]
-//   for (const sourceCode of sourceCodeList) {
-//     t.deepEqual(customerEval(sourceCode), eval(sourceCode))
-//   }
-// })
+test('测试声明与控制流 - 终极挑战', t => {
+  const sourceCodeList = [
+    '(() => { let a = 1; var b = 2; (() => { a = 2; b = 3; })(); return { a, b }; })()',
+    '((() => { var n = 55; return () => { for (let i = 0; i < 10; i++) { n += i } return n } })())()',
+    `(() => {
+      const obj = {
+        runTry: false,
+        runError: false,
+        runFinally: false,
+        errorMsg: null,
+      }
+      try {
+        obj.runTry = true
+        throw 'wow'
+      } catch (err) {
+        obj.errorMsg = err
+        obj.runError = true
+        return obj
+      } finally {
+        obj.runFinally = true
+      }
+    })()`,
+    '(function t(type) { const result = []; let i = 0; while (i < 5) { i++; switch (type + "") { case "0": continue; }result.push(i); } return result; })(0)',
+  ]
+  for (const sourceCode of sourceCodeList) {
+    t.deepEqual(customerEval(sourceCode), eval(sourceCode))
+  }
+})
 
 // test('测试声明与控制流 - 超纲挑战', t => {
 //   const sourceCode =

@@ -1,6 +1,17 @@
+/*
+ * @Author: vecpeng
+ * @Date: 2022-01-14 17:14:38
+ * @LastEditors: vecpeng
+ * @LastEditTime: 2022-03-25 16:11:48
+ * @FilePath: /jsjs-homework/homework/2/eval.js
+ * @Desc: 
+ * 
+ * Copyright (c) 2022 by vecpeng, All Rights Reserved. 
+ */
 const acorn = require('acorn');
 
 function evaluate(node, env) {
+  console.log(node)
   switch (node.type) {
     case 'Literal':
       return node.value;
