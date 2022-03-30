@@ -13,14 +13,21 @@ class Env {
 		this.current = undefined;
 
 		this.finished = false;
+		this.error = false;
+		this.exception = undefined;
+		this.errorStack = undefined;
+
 		this.result = undefined;
 
 		this.push(new Frame(node, scope));
 	}
 
 	throw(exception) {
-		this.error = true;
-		this.exception = exception;
+		this.enter('__exception', {
+			type: 'ThrowStatement',
+			argument: null,
+		});
+		this.set({ argument: exception });
 	}
 
 	push(frame) {
@@ -34,41 +41,51 @@ class Env {
 		return frame;
 	}
 
-	next(name, node, scope = this.current.scope) {
-		this.setValue('__returnName', name);
+	enter(name, node, scope = this.current.scope) {
+		this.set({ __returnName: name });
 		this.push(new Frame(node, scope));
 	}
 
-	return(value, appends = {}) {
+	leave(value, appendedValues = {}) {
 		stack.pop();
 		if (stack.length === 0) {
-			this.finished = true;
-			this.result = value;
+			this.return(value);
 		}
-		this.setValue(this.getValue('__returnName'), value)
-		this.setValue(appends);
+		const [returnName] = this.get('returnName');
+		this.setValues({
+			[returnName]: value,
+			...appendedValues,
+		});
 	}
 
-	hasValue(name) {
-		this.current.values.has(name);
+	return(value) {
+		this.finished = finished;
+		this.result = value;
 	}
 
-	setValue(name, value) {
-		this.current.values.set(name, value);
+	has(...names) {
+		for (const name of names) {
+			if (!this.current.values.has(name)) {
+				return false;
+			}
+		}
+		return true;
 	}
 
-	setValues(values) {
+	clear(...names) {
+		for (const name of names) {
+			this.clear(name);
+		}
+	}
+
+	set(values) {
 		for (const [name, value] of Object.entries(values)) {
 			this.current.values.set(name, value);
 		}
 	}
 
-	getValue(name) {
-		return this.current.values.get(name);
-	}
-
-	getValues(names) {
-		return names.map(name => this.getValue(name));
+	get(...names) {
+		return names.map(name => this.get(name));
 	}
 }
 
