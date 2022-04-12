@@ -6,14 +6,6 @@ class Scope {
     this.type = type
     this.parent = parent
   }
-  declare(kind, name) {
-    switch (kind) {
-      case 'var':
-        let root = this
-        while (root.parent) root = root.parent
-        // root.variables[name]
-    }
-  }
   get(name) {
     let root = this
     while (root.variables[name] === undefined && root) root = root.parent
