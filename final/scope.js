@@ -1,7 +1,7 @@
 class Scope {
     constructor(initial, parent = null, type = 'global') {
-        this.variables = {}
         this.isDefine = {}
+        this.variables = {}
         for (let key in initial) {
             this.variables[key] = initial[key]
             this.isDefine[key] = 'context'
@@ -29,12 +29,26 @@ class Scope {
         }
         return true
     }
+    find(name) {
+        if (this.isDefine[name]) {
+            return this.isDefine[name]
+        } else {
+            if (this.parent === null) {
+                if (name === 'this') return {}
+                return 'notDefined'
+            } else {
+                return this.parent.find(name)
+            }
+        }
+    }
     get(name) {
         if (this.isDefine[name]) {
             return this.variables[name]
         } else {
             if (this.parent === null) {
-                throw new Error('error:not declare: ' + name)
+                if (name === 'this') return {}
+                return undefined
+                // throw new Error('error:not declare: ' + name)
             } else {
                 return this.parent.get(name)
             }
@@ -47,7 +61,6 @@ class Scope {
                 this.variables[name] = value
             } else 
                 if (this.isDefine[name] === 'context') {
-                    console.log('hahaha');
                     return
                     // throw new TypeError('context can not be rewrite')
                 } else
@@ -59,6 +72,9 @@ class Scope {
                 }
         } else {
             if (this.parent === null) {
+                return {
+                    type: 'notDefine'
+                }
                 throw new Error('error:not declare ' + name)
             } else {
                 this.parent.set(name, value)
