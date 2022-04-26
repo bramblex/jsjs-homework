@@ -46,9 +46,8 @@ class Scope {
             return this.variables[name]
         } else {
             if (this.parent === null) {
-                if (name === 'this') return {}
+                if (name === 'this') return undefined
                 return undefined
-                // throw new Error('error:not declare: ' + name)
             } else {
                 return this.parent.get(name)
             }

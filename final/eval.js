@@ -66,10 +66,23 @@ function evaluate(node, scope) {
         res[obj.key.name] = evaluate(obj.value, scope)
         if (obj.value.type === 'FunctionExpression') {
           Object.defineProperty(res[obj.key.name], 'name', { value: obj.key.name })
+          // Object.defineProperty(res, obj.key.name, {
+          //   get: obj.key.name==='get' ? function (){
+          //     res[obj.key.name]()
+          //   } : undefined
+          // })
+          // Object.defineProperty(res, obj.key.name, {
+          //   set: obj.key.name==='set' ? function (value){
+          //     res[obj.key.name](value)
+          //   } : undefined
+          // })
         }
       })
       return res
     case 'NewExpression': {
+      if (node.callee.name === 'Error') {
+        return new Error(evaluate(node.argument, scope))
+      }
       let res = {}
       let childScope = new Scope({ this: res }, scope, 'function')
       let func = evaluate(node.callee, childScope)
@@ -86,12 +99,16 @@ function evaluate(node, scope) {
       return evaluate(node.callee, scope)(...node.arguments.map(arg => evaluate(arg, scope)))
     case 'ArrowFunctionExpression':
       // 箭头函数表达式返回的是一个函数
+      let argsEnv = new Scope({}, scope, 'function')
       return function (...args) {
-        let argsEnv = new Scope({}, scope, 'function')
+        argsEnv.variables['this'] = scope.get('this')
+        argsEnv.isDefine['this'] = 'let'
         node.params.map((arg, index) => {
           argsEnv.variables[arg.name] = args[index]
         })
-        return evaluate(node.body, argsEnv)
+        let result = evaluate(node.body, argsEnv)
+        if (node.body.type !== 'BlockStatement') return result
+        return evaluate(node.body, argsEnv).value
       }
     case 'SequenceExpression':
       let SequenceResult
@@ -119,7 +136,6 @@ function evaluate(node, scope) {
         if (result.type === 'continue' || result.type === 'data' || result.type === 'break') return false
         else return true
       })
-      // if (typeof result === 'Object') return result.value
       return result
     }
     case 'AssignmentExpression':
@@ -166,7 +182,7 @@ function evaluate(node, scope) {
           }
         }
     case 'ThisExpression': {
-      return scope.variables
+      return scope.get('this')
     }
     case 'WhileStatement': {
       let result
@@ -372,6 +388,9 @@ function evaluate(node, scope) {
       let f = function (...args) {
         let argsEnv = new Scope({}, scope, 'function')
         hoisting(node, argsEnv)
+        // 谁调用了函数f，this会得到改变，这里再去获取this的值
+        argsEnv.variables['this'] = this
+        argsEnv.isDefine['this'] = 'let'
         node.params.map((obj, index) => {
           argsEnv.variables[obj.name] = args[index]
           argsEnv.isDefine[obj.name] = 'let'
@@ -384,19 +403,23 @@ function evaluate(node, scope) {
       return f
     }
     case 'TryStatement': {
-      let result = evaluate(node.block, scope)
+      let childScope = new Scope({}, scope, 'block')
+      let result = evaluate(node.block, childScope)
+      childScope = new Scope({}, scope, 'block')
       if (result instanceof Error) {
-        let childScope = new Scope({}, scope, 'block')
         childScope.isDefine[node.handler.param.name] = 'let'
         childScope.variables[node.handler.param.name] = result.message
         result = evaluate(node.handler, childScope)
       }
+      childScope = new Scope({}, scope, 'block')
       if (node.finalizer) {
-        evaluate(node.finalizer, scope)
+        result = evaluate(node.finalizer, childScope)
       }
       return result
     }
     case 'ThrowStatement': {
+      let result =  evaluate(node.argument, scope)
+      if (result instanceof Error) return result
       return new Error(evaluate(node.argument, scope))
     }
     case 'CatchClause': {
@@ -405,9 +428,8 @@ function evaluate(node, scope) {
       return result
     }
     case 'MetaProperty': {
-      if (node.meta.name === 'new' && node.property.name === 'target') {
-        return undefined
-      }
+      let obj = evaluate(node.meta, scope)
+      return obj[node.property.name]
     }
     case 'UnaryExpression':{
       switch (node.operator) {
@@ -492,6 +514,12 @@ function hoisting(node, scope) {
         hoisting(v, childScope)
       })
       let f = function (...args) {
+        childScope.variables['this'] = this
+        childScope.isDefine['this'] = 'let'
+        childScope.variables['new'] = {
+          target: new.target
+        }
+        childScope.isDefine['new'] = 'let'
         node.params.map((v, index) => {
           childScope.variables[v.name] = args[index]
           childScope.isDefine[v.name] = 'let'

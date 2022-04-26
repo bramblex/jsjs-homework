@@ -28,57 +28,57 @@ module.exports = {
   t.true(people.constructor === People);
 });
 
-// test("NewExpression for built-in functions", t => {
-//   const scope = new Scope({
-//     Array,
-//     Date,
-//     RegExp
-//   });
+test("NewExpression for built-in functions", t => {
+  const scope = new Scope({
+    Array,
+    Date,
+    RegExp
+  });
 
-//   const { array, date, regexp } = customEval(
-//     `
-//     var array = new Array(1, 2, 3);
-//     var date = new Date();
-//     var regexp = new RegExp('abc');
+  const { array, date, regexp } = customEval(
+    `
+    var array = new Array(1, 2, 3);
+    var date = new Date();
+    var regexp = new RegExp('abc');
 
-//     module.exports = {
-//       array: array,
-//       date: date,
-//       regexp: regexp
-//     }
-//   `,
-//     scope
-//   );
+    module.exports = {
+      array: array,
+      date: date,
+      regexp: regexp
+    }
+  `,
+    scope
+  );
 
-//   t.deepEqual(array.length, 3);
-//   t.true(date <= new Date());
-//   t.true(regexp instanceof RegExp);
-// });
+  t.deepEqual(array.length, 3);
+  t.true(date <= new Date());
+  t.true(regexp instanceof RegExp);
+});
 
-// test("NewExpression for constructor function which return object", t => {
-//   const scope = new Scope();
+test("NewExpression for constructor function which return object", t => {
+  const scope = new Scope();
 
-//   const { o, p } = customEval(
-//     `
-//     var o = {
-//       a: 1
-//     }
+  const { o, p } = customEval(
+    `
+    var o = {
+      a: 1
+    }
 
-//     function P() {
-//       this.name = 1
+    function P() {
+      this.name = 1
 
-//       return o
-//     }
+      return o
+    }
 
-//     var p = new P()
+    var p = new P()
 
-//     module.exports = {
-//       o: o,
-//       p: p
-//     }
-//     `,
-//     scope
-//   );
+    module.exports = {
+      o: o,
+      p: p
+    }
+    `,
+    scope
+  );
 
-//   t.deepEqual(o, p);
-// });
+  t.deepEqual(o, p);
+});
