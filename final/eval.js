@@ -9,6 +9,8 @@ function evaluate(node, scope) {
     case 'Identifier':
       if (node.name === 'undefined') return undefined
       if (node.name === 'null') return null
+      if (node.name === 'JSON') return JSON
+      if (node.name === 'console') return console
       return scope.get(node.name)
     case 'BinaryExpression':
       switch (node.operator) {
@@ -66,16 +68,21 @@ function evaluate(node, scope) {
         res[obj.key.name] = evaluate(obj.value, scope)
         if (obj.value.type === 'FunctionExpression') {
           Object.defineProperty(res[obj.key.name], 'name', { value: obj.key.name })
-          // Object.defineProperty(res, obj.key.name, {
-          //   get: obj.key.name==='get' ? function (){
-          //     res[obj.key.name]()
-          //   } : undefined
-          // })
-          // Object.defineProperty(res, obj.key.name, {
-          //   set: obj.key.name==='set' ? function (value){
-          //     res[obj.key.name](value)
-          //   } : undefined
-          // })
+          if (obj.kind === 'get') {
+            Object.defineProperty(res, obj.key.name, {
+              get: function () {
+                return evaluate(obj.value, scope).apply(res)
+              }
+            })
+          }
+          if (obj.kind === 'set') {
+            Object.defineProperty(res, obj.key.name, {
+              set: function (value) {
+                return evaluate(obj.value, scope).call(res, value)
+              }
+            })
+          }
+
         }
       })
       return res
@@ -87,7 +94,6 @@ function evaluate(node, scope) {
       let childScope = new Scope({ this: res }, scope, 'function')
       let func = evaluate(node.callee, childScope)
       return new (func.bind.apply(func, [null].concat(node.arguments.map(v => (evaluate(v, scope))))))
-      // return new evaluate(node.callee, childScope)(...node.arguments.map(v => (evaluate(v,scope))))
     }
     case 'ArrayExpression':
       let result = []
@@ -129,7 +135,7 @@ function evaluate(node, scope) {
       }
     case 'BlockStatement': {
       const child = new Scope({}, scope, 'block')
-      let result
+      let result = {}
       node.body.every((stat) => {
         result = evaluate(stat, child)
         if (!result) return true
@@ -143,7 +149,9 @@ function evaluate(node, scope) {
       let leftPro
       if (node.left.type === 'MemberExpression') {
         if (node.left.object.type === 'ThisExpression') letfName = scope.get('this')
-        else letfName = scope.get(node.left.object.name)
+        else if (node.left.object.type === 'MemberExpression') {
+          letfName = evaluate(node.left.object, scope)
+        } else letfName = scope.get(node.left.object.name)
         leftPro = node.left.property.name
       }
       let rightValue = evaluate(node.right, scope)
@@ -248,9 +256,11 @@ function evaluate(node, scope) {
       scope.set(node.id.name, f)
       return f
     }
-    case 'VariableDeclaration':
+    case 'VariableDeclaration': {
+      let res
       node.declarations.forEach(v => {
-        if (scope.declare(node.kind, v.id.name)) {
+        res = scope.declare(node.kind, v.id.name)
+        if (res === true) {
           if (v.init) scope.set(v.id.name, evaluate(v.init, scope))
           else scope.set(v.id.name, undefined)
         }
@@ -260,6 +270,7 @@ function evaluate(node, scope) {
         type: 'execute',
         value: ''
       }
+    }
     case 'ExpressionStatement':
       return evaluate(node.expression, scope)
     case 'ReturnStatement':
@@ -333,11 +344,11 @@ function evaluate(node, scope) {
         if ((obj.test && evaluate(obj.test, childScope) === key) || hasCompare) {
           hasCompare = 1
           result = evaluate(obj, childScope)
-          if (['continue', 'break', 'return','data'].includes(result.type)) return false
+          if (['continue', 'break', 'return', 'data'].includes(result.type)) return false
         }
         if (!obj.test) {
           result = evaluate(obj, childScope)
-          if (['continue', 'break', 'return','data'].includes(result.type)) return false
+          if (['continue', 'break', 'return', 'data'].includes(result.type)) return false
         }
         return true
       })
@@ -418,7 +429,7 @@ function evaluate(node, scope) {
       return result
     }
     case 'ThrowStatement': {
-      let result =  evaluate(node.argument, scope)
+      let result = evaluate(node.argument, scope)
       if (result instanceof Error) return result
       return new Error(evaluate(node.argument, scope))
     }
@@ -431,15 +442,19 @@ function evaluate(node, scope) {
       let obj = evaluate(node.meta, scope)
       return obj[node.property.name]
     }
-    case 'UnaryExpression':{
+    case 'UnaryExpression': {
       switch (node.operator) {
-        case 'typeof':{
+        case 'typeof': {
+          if (node.argument.type === 'Literal') {
+            return typeof evaluate(node.argument, scope)
+          }
+          if (scope.find(node.argument.name) === 'notDefined') return 'undefined'
           return typeof evaluate(node.argument, scope)
         }
-        case 'void':{
+        case 'void': {
           return void evaluate(node.argument, scope)
         }
-        case 'delete':{
+        case 'delete': {
           if (node.argument.type === 'MemberExpression') {
             let obj = scope.get(node.argument.object.name)
             let pro = node.argument.property.name
@@ -456,6 +471,9 @@ function evaluate(node, scope) {
         case '-': return -evaluate(node.argument, scope)
         case '~': return ~evaluate(node.argument, scope)
       }
+    }
+    case 'YieldExpression': {
+      
     }
   }
 
@@ -476,7 +494,6 @@ function customEval(code, parent) {
     ecmaVersion: 6
   })
   evaluate(node, scope);
-
   return scope.get('module').exports;
 }
 
@@ -513,6 +530,24 @@ function hoisting(node, scope) {
       node.body.body.forEach(v => {
         hoisting(v, childScope)
       })
+      if (node.generator) {
+        function* gf(...args) {
+          childScope.variables['this'] = this
+          childScope.isDefine['this'] = 'let'
+          childScope.variables['new'] = {
+            target: new.target
+          }
+          childScope.isDefine['new'] = 'let'
+          node.params.map((v, index) => {
+            childScope.variables[v.name] = args[index]
+            childScope.isDefine[v.name] = 'let'
+          })
+          return evaluate(node.body, childScope).value
+        }
+        scope.declare('var', node.id.name)
+        scope.set(node.id.name, gf)
+        return gf
+      }
       let f = function (...args) {
         childScope.variables['this'] = this
         childScope.isDefine['this'] = 'let'
@@ -526,6 +561,7 @@ function hoisting(node, scope) {
         })
         return evaluate(node.body, childScope).value
       }
+      // f.prototype = {}
       Object.defineProperty(f, 'name', { value: node.id.name })
       Object.defineProperty(f, 'length', { value: node.params.length })
       scope.declare('var', node.id.name)

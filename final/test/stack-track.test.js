@@ -7,11 +7,10 @@ test("not defined", t => {
   try {
     customEval(
       `function get(){
-  var a = 123;
-  console.log(b);
-}
-  
-get();`,
+        var a = 123;
+        console.log(b);
+      }
+      get();`,
       scope
     );
     t.fail("it should throw an error");

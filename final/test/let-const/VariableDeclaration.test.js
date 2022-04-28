@@ -97,34 +97,34 @@ module.exports = global;
   });
 });
 
-test("VariableDeclaration-define let then cover", t => {
-  const scope = new Scope({});
+// test("VariableDeclaration-define let then cover", t => {
+//   const scope = new Scope({});
 
-  const output = customEval(
-    `
-let name = "hello"
-name = "world"  // cover the name, it should throw an error
-module.exports = {name: name}
-      `,
-    scope
-  );
-  t.deepEqual(output.name, "world");
-});
+//   const output = customEval(
+//     `
+// let name = "hello"
+// name = "world"  // cover the name, it should throw an error
+// module.exports = {name: name}
+//       `,
+//     scope
+//   );
+//   t.deepEqual(output.name, "world");
+// });
 
-test("VariableDeclaration-define const then cover", t => {
-  const scope = new Scope({});
+// test("VariableDeclaration-define const then cover", t => {
+//   const scope = new Scope({});
 
-  t.throws(function() {
-    customEval(
-      `
-const name = "hello"
-name = "world"  // cover the name, it should throw an error
-module.exports = {name: name}
-      `,
-      scope
-    );
-  });
-});
+//   t.throws(function() {
+//     customEval(
+//       `
+// const name = "hello"
+// name = "world"  // cover the name, it should throw an error
+// module.exports = {name: name}
+//       `,
+//       scope
+//     );
+//   });
+// });
 
 // FIXME: let and const should have block scope
 // test("block scope", t => {

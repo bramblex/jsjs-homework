@@ -10,6 +10,9 @@ class Scope {
         this.parent = parent
     }
     declare(kind, name) {   // var | const | let
+        if (this.isDefine[name] === 'context') {
+            if (kind === 'let' || kind === 'const') return new Error()
+        }
         if (this.isDefine[name] === 'context' && this.type === 'global') return false
         if (kind === 'const') kind = '-const'
         switch (this.type) {
@@ -35,6 +38,7 @@ class Scope {
         } else {
             if (this.parent === null) {
                 if (name === 'this') return {}
+                // return false
                 return 'notDefined'
             } else {
                 return this.parent.find(name)
@@ -47,6 +51,7 @@ class Scope {
         } else {
             if (this.parent === null) {
                 if (name === 'this') return undefined
+                throw new Error('not define: '+name)
                 return undefined
             } else {
                 return this.parent.get(name)
