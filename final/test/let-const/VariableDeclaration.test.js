@@ -127,23 +127,23 @@ module.exports = {name: name}
 });
 
 // FIXME: let and const should have block scope
-// test("block scope", t => {
-//   const scope = new Scope({});
+test("block scope", t => {
+  const scope = new Scope({});
 
-//   const { a, b } = customEval(
-//     `
-// var a = 1;
-// var b;
-// {
-//   // should have block scope
-//   const a = 2;
-//   b =a;
-// }
-// module.exports = {a:a, b:b}
-//     `,
-//     scope
-//   );
+  const { a, b } = customEval(
+    `
+var a = 1;
+var b;
+{
+  // should have block scope
+  const a = 2;
+  b =a;
+}
+module.exports = {a:a, b:b}
+    `,
+    scope
+  );
 
-//   t.deepEqual(a, 1);
-//   t.deepEqual(b, 2);
-// });
+  t.deepEqual(a, 1);
+  t.deepEqual(b, 2);
+});

@@ -17,7 +17,6 @@ test('控制流 - 初级挑战', t => {
     t.deepEqual(customerEval(sourceCode, baseEnv), eval(sourceCode))
   }
 })
-
 test('声明 - 初级挑战', t => {
   const sourceCodeErrorMap = {
     'var a = 1;let b = 2;const c = 3': undefined,
@@ -28,8 +27,7 @@ test('声明 - 初级挑战', t => {
     if (err === undefined) {
       t.deepEqual(customerEval(sourceCode), undefined)
     } else {
-      t.deepEqual(customerEval(sourceCode), err)
-      // t.throws(() => customerEval(sourceCode), err)
+      t.throws(() => customerEval(sourceCode), err)
     }
   }
 })

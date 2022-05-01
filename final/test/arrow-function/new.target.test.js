@@ -21,6 +21,5 @@ module.exports = {target: target, Person: Person};
   `,
     scope
   );
-
   t.true(target === Person);
 });
