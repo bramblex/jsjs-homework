@@ -4,7 +4,7 @@ const { customEval, Scope } = require('../eval');
 test("not defined", t => {
   const scope = new Scope();
 
-  try {
+  t.throws(function () {
     customEval(
       `function get(){
         var a = 123;
@@ -13,8 +13,5 @@ test("not defined", t => {
       get();`,
       scope
     );
-    t.fail("it should throw an error");
-  } catch (err) {
-    // ignore
-  }
+  })
 });

@@ -10,6 +10,7 @@ class Scope {
         this.parent = parent
     }
     declare(kind, name) {   // var | const | let
+        if (this.findThis(name) === 'context' && kind === 'let') throw new Error()
         if (this.isDefine[name] === 'context') {
             if (kind === 'let' || kind === 'const') return new Error()
         }
@@ -45,13 +46,32 @@ class Scope {
             }
         }
     }
+    findThis(name) {
+        // 特判一下这个name是否和context冲突
+        // 说实话，我也觉得写得太丑了这里
+        if (this.type === 'block' || this.type === 'function') {
+            if (!(this.type === 'block' && this.parent && this.parent.type === 'global')) {
+                return 'notDefined'
+            }
+        }
+        if (this.isDefine[name]) {
+            return this.isDefine[name]
+        } else {
+            if (this.parent === null) {
+                if (name === 'this') return {}
+                return 'notDefined'
+            } else {
+                return this.parent.find(name)
+            }
+        }
+    }
     get(name) {
         if (this.isDefine[name]) {
             return this.variables[name]
         } else {
             if (this.parent === null) {
                 if (name === 'this') return undefined
-                throw new Error('not define: '+name)
+                throw new Error('not define: ' + name)
                 return undefined
             } else {
                 return this.parent.get(name)
@@ -63,17 +83,17 @@ class Scope {
             if (this.isDefine[name] === '-const') {
                 this.isDefine[name] = 'const'
                 this.variables[name] = value
-            } else 
+            } else
                 if (this.isDefine[name] === 'context') {
                     return
                     // throw new TypeError('context can not be rewrite')
                 } else
-                if (this.isDefine[name] === 'const') {
-                    throw new TypeError('Assignment to constant variable')
-                    // return new TypeError('Assignment to constant variable')
-                } else {
-                    this.variables[name] = value
-                }
+                    if (this.isDefine[name] === 'const') {
+                        throw new TypeError('Assignment to constant variable')
+                        // return new TypeError('Assignment to constant variable')
+                    } else {
+                        this.variables[name] = value
+                    }
         } else {
             if (this.parent === null) {
                 return {
