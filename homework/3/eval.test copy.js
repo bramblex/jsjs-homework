@@ -21,7 +21,7 @@ test('声明 - 初级挑战', t => {
   const sourceCodeErrorMap = {
     'var a = 1;let b = 2;const c = 3': undefined,
     'var a = 1; var a = 2;': undefined,
-    // 'const a = 1; a = 5;': new TypeError('Assignment to constant variable'),
+    'const a = 1; a = 5;': new TypeError('Assignment to constant variable'),
   }
   for (const [sourceCode, err] of Object.entries(sourceCodeErrorMap)) {
     if (err === undefined) {
