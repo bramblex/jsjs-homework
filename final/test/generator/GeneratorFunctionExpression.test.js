@@ -12,12 +12,10 @@ function* get(){
   var a = 123;
   yield a;
 }
-
 module.exports = get;
   `,
     scope
   );
-
   const generator = get();
   t.deepEqual(generator.next(), { done: false, value: 123 });
   t.deepEqual(generator.next(), { done: true, value: undefined });
