@@ -211,6 +211,7 @@ function* evaluate(node, scope) {
 
       // 箭头函数表达式返回的是一个函数
       return function (...args) {
+        // 箭头函数的this取决于当前的作用域
         argsEnv.variables['this'] = scope.get('this')
         argsEnv.isDefine['this'] = 'let'
         node.params.map((arg, index) => {
@@ -887,6 +888,7 @@ function hoisting(node, scope) {
 
       if (node.async) {
         let f = function () {
+          // 第一步，先做出一个generator
           let func = function* (...args) {
             childScope.variables['this'] = this
             childScope.isDefine['this'] = 'let'
@@ -901,18 +903,22 @@ function hoisting(node, scope) {
 
             let g = evaluate(node.body, childScope)
             let rg = g.next()
-            while (!rg.done) {yield rg.value; rg = g.next(); }
+            while (!rg.done) { yield rg.value; rg = g.next(); }
             let body = rg.value
 
             return body.value
           }
-
-          let g = func()
-          let rg = g.next()
-          while (!rg.done) {
-            rg = g.next()
+          
+          // 第二步，不断的跑那个generator
+          let next = (g) => {
+            let rg = g.next()
+            if (rg.done) return Promise.resolve(rg.value)
+            return next(g)
           }
-          return Promise.resolve(rg.value)
+          return new Promise((resolve) => {
+            let g = func()
+            resolve(next(g))
+          })
         }
         scope.declare('var', node.id.name)
         scope.set(node.id.name, f)
@@ -920,6 +926,7 @@ function hoisting(node, scope) {
       }
 
       let f = function (...args) {
+        // 普通函数 每次重新获取this，实现函数的this动态等于其调用者
         childScope.variables['this'] = this
         childScope.isDefine['this'] = 'let'
         childScope.variables['new'] = {
