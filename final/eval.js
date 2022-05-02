@@ -908,12 +908,14 @@ function hoisting(node, scope) {
 
             return body.value
           }
-          
+
           // 第二步，不断的跑那个generator
           let next = (g) => {
             let rg = g.next()
             if (rg.done) return Promise.resolve(rg.value)
-            return next(g)
+            return next(g).then(r => {
+              return r
+            })
           }
           return new Promise((resolve) => {
             let g = func()
