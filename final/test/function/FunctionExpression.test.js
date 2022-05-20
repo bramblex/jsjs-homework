@@ -34,7 +34,6 @@ module.exports = func;
   `,
     scope
   );
-
   t.true(typeof testFunc === "function");
   t.deepEqual(testFunc.length, 1);
   t.deepEqual(testFunc.name, "test");
@@ -56,7 +55,6 @@ module.exports = person;
   `,
     scope
   );
-
   t.deepEqual(person.sayName.name, "sayName");
 });
 

@@ -17,8 +17,6 @@ module.exports = t;
   );
 
   const ctx = {};
-
   func.call(ctx);
-
   t.deepEqual(ctx.name, "hello");
 });
