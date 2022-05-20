@@ -7,20 +7,22 @@ class scope {
     declare(kind, name, value = undefined) {
         //不能重写
         if(kind === 'var' && (name === 'globalThis' || name === 'global')) return value;
-        //需要判断不是kind的情形？
         switch (kind) {
             case 'var': {
                 let scope = this.searchAncestor();
+                //对象如果有value_属性会造成其被修改，已知的bug，未修复
                 return scope.variable[name] = { 'kind': kind, 'value_': value };
             }
             case 'let':
             case 'const': {
+                //不能重复声明
                 if (this.defined(name)) throw new Error(`Uncaught SyntaxError: Identifier ${name} has already been declared`);
                 return this.variable[name] = { 'kind': kind, 'value_': value };
             }
         }
         throw new Error(`Keyword Error: ${kind} is not defined`);
     }
+    //找顶级作用域或函数作用域
     searchAncestor() {
         let scope = this;
         while (scope.parent && scope.type !== 'function') {
@@ -28,6 +30,7 @@ class scope {
         }
         return scope;
     }
+    //是否声明
     defined(name) {
         if (name in this.variable) return true;
         else if (this.type === 'global' && this.parent) {
@@ -35,13 +38,15 @@ class scope {
         }
         return false;
     }
+    //获取对象引用
     getobject(node_) {
         let node = this;
         let searchname;
-        
+        //this在scope中的key被设为"this"，检索时就也要用"this"
         if (node_.object.type === 'ThisExpression') {
             searchname = 'this';
         }
+        //如果是MemberExpression，递归地找到object
         else if (node_.object.type === 'MemberExpression') {
             let a = this.getobject(node_.object);
             if (a) return a[node_.object.property.name];
@@ -87,6 +92,7 @@ class scope {
         let node = this;
         while (node) {
             if (name in node.variable) {
+                //只有直接声明的变量才有value_
                 if (node.variable[name].hasOwnProperty('value_')) {
                     return node.variable[name].value_;
                 }

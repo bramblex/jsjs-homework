@@ -12,9 +12,12 @@ function* evaluate_(node, env) {
       return node.value;
     }
     case 'Identifier': {
+      //undefined不是字面量
       if (node.name === 'undefined') return undefined;
       return env.get(node.name);
     }
+    //本来使用generator后函数似乎是应该递归改循环的，但感觉有些积重难返，
+    //所以仅仅对可能出现yield的地方进行了完善，这样写肯定是不完备的
     case 'BinaryExpression': {
       let left_ = evaluate_(node.left, env);
       let right_ = evaluate_(node.right, env);
@@ -67,8 +70,9 @@ function* evaluate_(node, env) {
         case '|': return left | right;
       }
     }
-    //注意对象连续赋值时指针指向问题，在预编译阶段赋值对象的指针指向就已经确定了
+    //注意对象连续赋值时指针指向问题，在预编译阶段被赋值对象的指针指向就已经确定了
     case 'AssignmentExpression': {
+      //如果是MemberExpression，先把被赋值对象拿出来
       let continuous = node.right.type === 'AssignmentExpression' && node.left.type === 'MemberExpression' ?
         env.getobject(node.left) : undefined;
       let right = evaluate_(node.right, env).next().value;
@@ -123,12 +127,7 @@ function* evaluate_(node, env) {
         return callee.apply(obj, args);
       }
       else {
-        try {
-          return callee.apply(this, args);
-        }
-        catch (err) {
-          throw err;
-        }
+          return callee(args);    
       }
     }
     case 'NewExpression': {
@@ -137,7 +136,7 @@ function* evaluate_(node, env) {
       env.variable['newtarget'] = func; //返回构造函数
       return new (func.bind.apply(func, [null].concat(args)));
     }
-    //new.target
+    //new.target，没有想到很好的实现方法，只能到scope中去找
     case 'MetaProperty': {
       try {
         return env.get('newtarget');
@@ -154,7 +153,9 @@ function* evaluate_(node, env) {
       let return_;
       while (evaluate_(node.test, env).next().value) {
         return_ = evaluate_(node.body, env).next().value
+        //如果return_有type属性代表它是continue, return或break，执行相应操作，下同
         if (return_ && return_.type) {
+          //找label
           if (return_.label && (!node.label || node.label && return_.label !== node.label))
             return return_;
           else if (return_.type === 'continue') continue;
@@ -256,6 +257,7 @@ function* evaluate_(node, env) {
     }
     case 'FunctionExpression': {
       const a = function (...args) {
+        //有this
         const env_ = new Scope({ 'this': this }, env, 'function')
         node.params.forEach((p, i) => {
           env_.declare('let', p.name, args[i]);
@@ -264,6 +266,7 @@ function* evaluate_(node, env) {
         if (a && a?.type === 'return') return a.value;
         else return a;
       };
+      //用Proxy拦截
       const handler = new Proxy(a, {
         get(target, name) {
           if (name === 'length') return node.params.length;
@@ -280,6 +283,7 @@ function* evaluate_(node, env) {
     }
     case 'ArrowFunctionExpression': {
       const a = (...args) => {
+        //没有this
         const env_ = new Scope({}, env, 'function')
         node.params.forEach((p, i) => {
           env_.declare('let', p.name, args[i]);
@@ -322,6 +326,7 @@ function* evaluate_(node, env) {
         let generator, init;
         if (vd.init) {
           generator = evaluate_(vd.init, env);
+          //yield不仅可以在表达式各种"Expression"中使用，还可以出现在变量声明中
           while (true) {
             init = generator.next();
             if (init?.done) {
@@ -355,7 +360,7 @@ function* evaluate_(node, env) {
       } finally {
         if (node.finalizer) final_ = evaluate_(node.finalizer, env).next().value;
       }
-      return catch_ || final_ || try_;
+      return catch_ || try_ || final_ ;
     }
     case 'CatchClause': {
       return evaluate_(node.body, env).next().value;
@@ -366,9 +371,11 @@ function* evaluate_(node, env) {
       return;
     }
     case 'BlockStatement': {
+      //创建作用域
       const blockscope = new Scope({}, env, 'block');
       declaration(node, blockscope);
       let return_, generator;
+      //遍历块中的每条语句，直到return或循环结束
       for (const node_ of node.body) {
         if (node_.type === 'FunctionDeclaration') continue;
         generator = evaluate_(node_, blockscope);
@@ -386,10 +393,10 @@ function* evaluate_(node, env) {
       return;
     }
     case 'Program': {
-
       declaration(node, env);
       let return_;
       for (const node_ of node.body) {
+        //函数已被提升，pass
         if (node_.type === 'FunctionDeclaration') continue;
         return_ = evaluate_(node_, env).next().value;
         if (return_ && return_.type === 'return') return return_.value;
@@ -403,16 +410,21 @@ function* evaluate_(node, env) {
   throw new Error(`Unsupported Syntax ${node.type} at Location ${node.start}:${node.end}`);
 }
 
+//function和var的提升
 function declaration(node_, env) {
   node_.body.forEach(node => {
     switch (node.type) {
+      //var的提升
+      //let和const也有提升，但所谓的“死区”不知道如何实现，遂干脆不写
       case 'VariableDeclaration': {
         if (node.kind === 'var')
           return node.declarations.forEach(vd => {
+            //仅声明不初始化，undefined
             env.declare(node.kind, vd.id.name, undefined)
           })
         else return;
       }
+      //提升函数声明
       case 'FunctionDeclaration': {
         let function_;
         //生成器函数
@@ -424,6 +436,7 @@ function declaration(node_, env) {
             })
             let generator = evaluate_(node.body, env_);
             let a;
+            //直到done === true
             while (true) {
               a = generator.next();
               if (a?.done) {
@@ -436,8 +449,10 @@ function declaration(node_, env) {
             else return a;
           }
         }
-        //async，先转换为生成器
+        //async
+        //Referrence：https://juejin.cn/post/6844904102053281806
         else if (node.async) {
+          //先转换为生成器
           let generator = function* (...args) {
             const env_ = new Scope({ 'this': this }, env, 'function')
             node.params.forEach((p, i) => {
@@ -464,15 +479,18 @@ function declaration(node_, env) {
                 try {
                   return_ = gen[key](arg);
                 } catch (err) {
+                  //如果报错就reject
                   return reject(err);
                 }
-
+                //完成则resolve
                 if (return_.done) return resolve(return_.value);
                 else {
+                  //迭代，一步一步执行到每一个yield
                   return Promise.resolve(return_.value).then(
                     (value) => {
                       next_('next', value);
                     },
+                    //try gen['throw'](err)，被catch到，接着reject
                     (err) => {
                       next_('throw', err);
                     }
@@ -495,7 +513,8 @@ function declaration(node_, env) {
             else return a;
           }
         }
-
+        //这里不能像functionexpression那样用Proxy，否则定义的函数对象的constructor
+        //和函数对象的constructor不一致
         Object.defineProperty(function_, "name", {
           get() {
             if (node?.id?.name) return node.id.name;
@@ -508,7 +527,7 @@ function declaration(node_, env) {
           },
         });
 
-        return env.declare('const', node.id.name, function_);
+        return env.declare('let', node.id.name, function_);
       }
     }
   })
