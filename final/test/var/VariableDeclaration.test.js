@@ -45,7 +45,7 @@ module.exports = global;
     `,
     scope
   );
-
+  
   t.deepEqual(g, "hello");
 });
 
