@@ -54,6 +54,7 @@ function* evaluate_(node, env) {
         case '>>': return left >> right;
         case '>>>': return left >>> right;
         case '**': return left ** right;
+        case 'instanceof': return left instanceof right;
       }
     }
     case 'LogicalExpression': {
