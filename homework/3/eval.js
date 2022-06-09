@@ -75,32 +75,57 @@ function evaluate(node, scope, config) {
       return undefined;
     // 控制流相关
     case 'LabeledStatement':
-      return evaluate(node.body, scope, {...config, label: node.label.name});
+      try {
+        return evaluate(node.body, scope, {...config, label: node.label.name});
+      } catch (e) {
+        if (e instanceof Interrupt && e.type === 'break' && e.value === node.label.name) {
+          return undefined;
+        } else {
+          throw e;
+        }
+      }
     case 'IfStatement':
       if (evaluate(node.test, scope)) {
         return evaluate(node.consequent, scope);
       } else {
         return evaluate(node.alternate, scope);
       }
+    case 'SwitchStatement':
+      let res;
+      const discriminant = evaluate(node.discriminant, scope);
+      node.cases.reduce((acc, cur) => {
+        if (acc || (acc = (discriminant === evaluate(cur.test, scope)))) {
+          const caseScope = new Scope('block', scope);
+          res = cur.consequent.reduce((_, cur) => {
+            return evaluate(cur, caseScope);
+          }, undefined);
+        }
+      }, false);
+      return res;
     case 'BreakStatement':
       throw new Interrupt('break', node.label ? node.label.name : undefined);
     case 'ContinueStatement':
       throw new Interrupt('continue', node.label ? node.label.name : undefined);
+    case 'ReturnStatement':
+      throw new Interrupt('return', evaluate(node.argument, scope));
     case 'ForStatement':
       let forScope = new Scope('block', scope);
       for (evaluate(node.init, forScope); evaluate(node.test, forScope); evaluate(node.update, forScope)) {
-        const res = evaluate(node.body, new Scope('block', forScope));
-        if (res instanceof Interrupt) {
-          if (!res.value || res.value == node.config.label) {
-            if (res.type === 'break') {
-              return;
-            } else if (res.type === 'continue') {
-              continue;
+        try {
+          evaluate(node.body, new Scope('block', forScope));
+        } catch (e) {
+          if (e instanceof Interrupt) {
+            if (!e.value || e.value == node.config.label) {
+              if (e.type === 'break') {
+                return;
+              } else if (e.type === 'continue') {
+                continue;
+              } else {
+                throw e;
+              }
             } else {
-              throw res;
+              return e;
             }
-          } else {
-            return res;
           }
         }
       }
@@ -108,37 +133,54 @@ function evaluate(node, scope, config) {
     case 'WhileStatement':
       let whileScope = new Scope('block', scope);
       while (evaluate(node.test, whileScope)) {
-        const res = evaluate(node.body, new Scope('block', whileScope));
-        if (res instanceof Interrupt) {
-          if (!res.value || res.value == node.config.label) {
-            if (res.type === 'break') {
-              return;
-            } else if (res.type === 'continue') {
-              continue;
+        try {
+          evaluate(node.body, new Scope('block', whileScope));
+        } catch (e) {
+          if (e instanceof Interrupt) {
+            if (!e.value || e.value == node.config.label) {
+              if (e.type === 'break') {
+                return;
+              } else if (e.type === 'continue') {
+                continue;
+              } else {
+                throw e;
+              }
             } else {
-              throw res;
+              return e;
             }
-          } else {
-            return res;
           }
         }
       }
       return undefined;
     case 'TryStatement':
       try {
-        evaluate(node.block, new Scope('block', scope));
+        return evaluate(node.block, new Scope('block', scope));
       } catch (err) {
         if (err instanceof Interrupt) {
           if (err.type === 'throw') {
-            const catchScope = new Scope('block', scope);
-            catchScope.declare('var', node.handler.param.name, err.value);
-            evaluate(node.handler.body, catchScope);
+            try {
+              const catchScope = new Scope('block', scope);
+              catchScope.declare('var', node.handler.param.name, err.value);
+              return evaluate(node.handler.body, catchScope);
+            } catch (e) {
+              if (e instanceof Interrupt && e.type === 'return') {
+                return e.value;
+              }
+            }
           }
         } else {
           throw err;
         }
       } finally {
-        return evaluate(node.finalizer, new Scope('block', scope));
+        try {
+          evaluate(node.finalizer, new Scope('block', scope));
+        } catch (err) {
+          if (err instanceof Interrupt && err.type === 'return') {
+            return err.value;
+          } else {
+            throw err;
+          }
+        }
       }
     case 'ThrowStatement':
       throw new Interrupt('throw', evaluate(node.argument, scope));
@@ -152,8 +194,6 @@ function evaluate(node, scope, config) {
         evaluate(expression, scope), undefined);
     case 'ExpressionStatement':
       return evaluate(node.expression, scope);
-    case 'ReturnStatement':
-      return evaluate(node.argument, scope);
     // 表达式求值相关
     // 作为叶子节点的字面量和变量直接返回它们的值
     case 'Literal':
@@ -170,9 +210,37 @@ function evaluate(node, scope, config) {
       }), {});
     // 一些运算相关的表达式((懒得枚举运算符所以直接用eval了嘤~
     case 'BinaryExpression':
-      return eval(evaluate(node.left, scope) + node.operator + evaluate(node.right, scope));
+      switch (node.operator) {
+        case '+': return evaluate(node.left, scope) + evaluate(node.right, scope);
+        case '-': return evaluate(node.left, scope) - evaluate(node.right, scope);
+        case '*': return evaluate(node.left, scope) * evaluate(node.right, scope);
+        case '/': return evaluate(node.left, scope) / evaluate(node.right, scope);
+        case '%': return evaluate(node.left, scope) % evaluate(node.right, scope);
+        case '<': return evaluate(node.left, scope) < evaluate(node.right, scope);
+        case '>': return evaluate(node.left, scope) > evaluate(node.right, scope);
+        case '<=': return evaluate(node.left, scope) <= evaluate(node.right, scope);
+        case '>=': return evaluate(node.left, scope) >= evaluate(node.right, scope);
+        case '==': return evaluate(node.left, scope) == evaluate(node.right, scope);
+        case '!=': return evaluate(node.left, scope) != evaluate(node.right, scope);
+        case '===': return evaluate(node.left, scope) === evaluate(node.right, scope);
+        case '!==': return evaluate(node.left, scope) !== evaluate(node.right, scope);
+        case '<<': return evaluate(node.left, scope) << evaluate(node.right, scope);
+        case '>>': return evaluate(node.left, scope) >> evaluate(node.right, scope);
+        case '>>>': return evaluate(node.left, scope) >>> evaluate(node.right, scope);
+        case '&': return evaluate(node.left, scope) & evaluate(node.right, scope);
+        case '|': return evaluate(node.left, scope) | evaluate(node.right, scope);
+        case '^': return evaluate(node.left, scope) ^ evaluate(node.right, scope);
+        case 'in': return evaluate(node.left, scope) in evaluate(node.right, scope);
+        case 'instanceof': return evaluate(node.left, scope) instanceof evaluate(node.right, scope);
+      }
     case 'UnaryExpression':
-      return eval(node.operator + evaluate(node.argument, scope));
+      switch (node.operator) {
+        case '+': return +evaluate(node.argument, scope);
+        case '-': return -evaluate(node.argument, scope);
+        case '~': return ~evaluate(node.argument, scope);
+        case '!': return !evaluate(node.argument, scope);
+        case 'typeof': return typeof evaluate(node.argument, scope);
+      }
     // 这里有个短路
     case 'LogicalExpression':
       return node.operator === '&&' ?
@@ -280,7 +348,15 @@ function evaluate(node, scope, config) {
         return evaluate(node.body, newScope);
       };
     case 'CallExpression':
-      return evaluate(node.callee, scope)(...node.arguments.map(arg => evaluate(arg, scope)));
+      try {
+        return evaluate(node.callee, scope)(...node.arguments.map(arg => evaluate(arg, scope)));
+      } catch(e) {
+        if (e instanceof Interrupt && e.type === 'return') {
+          return e.value;
+        } else {
+          throw e;
+        }
+      }
   }
 
   throw new Error(`Unsupported Syntax ${node.type} at Location ${node.start}:${node.end}`);
@@ -293,6 +369,6 @@ function customerEval(code, scope = new Scope('global')) {
   return evaluate(node, scope)
 }
 
-// customerEval('(() => { let sum = 0; for (let i = 0; i < 10; i++) { sum += i } return sum })()');
+// customerEval('(function t(type) { const result = []; let i = 0; while (i < 5) { i++; switch (type + "") { case "0": continue; }result.push(i); } return result; })(0)');
 
 module.exports = customerEval
