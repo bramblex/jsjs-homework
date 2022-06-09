@@ -17,8 +17,27 @@ class Scope {
         throw new SyntaxError(`${name} has already been declared`);
       }
     } else {
-      this.variables[name] = value;
-      this.kinds[name] = kind;
+      if (kind === 'var') {
+        try {
+          this.get(name);
+          this.set(name, value);
+        } catch (err) {
+          if (err instanceof ReferenceError && err.message === `${name} is not defined`) {
+            if (this.type === 'function' || this.type === 'global') {
+              this.variables[name] = value;
+              this.kinds[name] = kind;
+            } else {
+              this.parent.declare(kind, name, value);
+            }
+          } else {
+            throw err;
+          }
+        }
+        
+      } else {
+        this.variables[name] = value;
+        this.kinds[name] = kind;
+      }
       return undefined;
     }
   }
@@ -115,7 +134,7 @@ function evaluate(node, scope, config) {
           evaluate(node.body, new Scope('block', forScope));
         } catch (e) {
           if (e instanceof Interrupt) {
-            if (!e.value || e.value == node.config.label) {
+            if (!e.value || e.value == config.label) {
               if (e.type === 'break') {
                 return;
               } else if (e.type === 'continue') {
@@ -124,7 +143,7 @@ function evaluate(node, scope, config) {
                 throw e;
               }
             } else {
-              return e;
+              throw e;
             }
           }
         }
@@ -137,7 +156,7 @@ function evaluate(node, scope, config) {
           evaluate(node.body, new Scope('block', whileScope));
         } catch (e) {
           if (e instanceof Interrupt) {
-            if (!e.value || e.value == node.config.label) {
+            if (!e.value || e.value == config.label) {
               if (e.type === 'break') {
                 return;
               } else if (e.type === 'continue') {
@@ -369,6 +388,6 @@ function customerEval(code, scope = new Scope('global')) {
   return evaluate(node, scope)
 }
 
-// customerEval('(function t(type) { const result = []; let i = 0; while (i < 5) { i++; switch (type + "") { case "0": continue; }result.push(i); } return result; })(0)');
+// customerEval('(() => { loop1: for (var i = 0; i < 3; i++) { loop2: for (var m = 1; m < 3; m++) { if (m % 2 === 0) { break loop1; } loop3: for (var y = 1; y < 10; y++) { if (y % 5 === 0) { continue loop2; } } } } return { i, m, y } })()');
 
 module.exports = customerEval
