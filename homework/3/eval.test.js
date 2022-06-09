@@ -26,7 +26,7 @@ test('声明 - 初级挑战', () => {
     if (err === undefined) {
       expect(customerEval(sourceCode)).toBe(undefined)
     } else {
-      expect(() => customerEval(sourceCode)).toThrowError(err)
+      t.throws(() => customerEval(sourceCode), { instanceOf: err.constructor, message: err.message })
     }
   }
 })
