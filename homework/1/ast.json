@@ -1,0 +1,156 @@
+{
+  "type": "Program",
+  "start": 0,
+  "end": 106,
+  "body": [
+    {
+      "type": "FunctionDeclaration",
+      "start": 1,
+      "end": 105,
+      "id": { "type": "Identifier", "start": 10, "end": 13, "name": "bar" },
+      "params": [],
+      "body": {
+        "type": "BlockStatement",
+        "start": 16,
+        "end": 105,
+        "body": [
+          {
+            "type": "LabeledStatement",
+            "start": 19,
+            "end": 103,
+            "body": {
+              "type": "WhileStatement",
+              "start": 24,
+              "end": 103,
+              "test": {
+                "type": "Literal",
+                "start": 30,
+                "end": 34,
+                "value": true,
+                "raw": "true"
+              },
+              "body": {
+                "type": "BlockStatement",
+                "start": 36,
+                "end": 103,
+                "body": [
+                  {
+                    "type": "VariableDeclaration",
+                    "start": 40,
+                    "end": 87,
+                    "declarations": [
+                      {
+                        "type": "VariableDeclarator",
+                        "start": 44,
+                        "end": 86,
+                        "id": {
+                          "type": "Identifier",
+                          "start": 44,
+                          "end": 47,
+                          "name": "bar"
+                        },
+                        "init": {
+                          "type": "ObjectExpression",
+                          "start": 50,
+                          "end": 86,
+                          "properties": [
+                            {
+                              "type": "Property",
+                              "start": 55,
+                              "end": 82,
+                              "key": {
+                                "type": "Identifier",
+                                "start": 55,
+                                "end": 58,
+                                "name": "foo"
+                              },
+                              "value": {
+                                "type": "MemberExpression",
+                                "start": 60,
+                                "end": 82,
+                                "object": {
+                                  "type": "MemberExpression",
+                                  "start": 60,
+                                  "end": 71,
+                                  "object": {
+                                    "type": "MemberExpression",
+                                    "start": 60,
+                                    "end": 67,
+                                    "object": {
+                                      "type": "Identifier",
+                                      "start": 60,
+                                      "end": 63,
+                                      "name": "bar"
+                                    },
+                                    "property": {
+                                      "type": "Identifier",
+                                      "start": 64,
+                                      "end": 67,
+                                      "name": "foo"
+                                    },
+                                    "computed": false
+                                  },
+                                  "property": {
+                                    "type": "Identifier",
+                                    "start": 68,
+                                    "end": 71,
+                                    "name": "foo"
+                                  },
+                                  "computed": false
+                                },
+                                "property": {
+                                  "type": "BinaryExpression",
+                                  "start": 72,
+                                  "end": 81,
+                                  "left": {
+                                    "type": "Identifier",
+                                    "start": 72,
+                                    "end": 75,
+                                    "name": "bar"
+                                  },
+                                  "operator": "+",
+                                  "right": {
+                                    "type": "Identifier",
+                                    "start": 78,
+                                    "end": 81,
+                                    "name": "bar"
+                                  }
+                                },
+                                "computed": true
+                              },
+                              "kind": "init"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "kind": "var"
+                  },
+                  {
+                    "type": "BreakStatement",
+                    "start": 90,
+                    "end": 100,
+                    "label": {
+                      "type": "Identifier",
+                      "start": 96,
+                      "end": 99,
+                      "name": "foo"
+                    }
+                  }
+                ]
+              }
+            },
+            "label": {
+              "type": "Identifier",
+              "start": 19,
+              "end": 22,
+              "name": "foo"
+            }
+          }
+        ]
+      },
+      "expression": false
+    }
+  ],
+  "sourceType": "script"
+}
