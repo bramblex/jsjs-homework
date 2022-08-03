@@ -6,9 +6,35 @@ function transform(root, originName, targetName) {
   // 遍历所有节点
   return traverse((node, ctx, next) => {
 
-    // TODO: 作业代码写在这里
-    if (node.type === 'xxx') {
-    }
+		// TODO: 作业代码写在这里
+
+		// 对方法名进行重命名
+		if (node.type === 'FunctionDeclaration') {
+			if (node.id.name === originName) {
+				node.id.name = targetName;
+			}
+		}
+		// 对变量名进行重命名
+		if (node.type === 'VariableDeclaration') {
+			if (node.declarations[0].id.name === originName) {
+				node.declarations[0].id.name = targetName;
+			}
+		}
+		// 对象属性名进行重命名
+		if (node.type === 'MemberExpression' && !node.object.object) {
+			if (node.object.name === originName) {
+				node.object.name = targetName;
+			}
+		}
+		// 对 [foo + foo] 进行重命名
+		if (node.type === 'BinaryExpression') {
+			if (node.left.name === originName) {
+				node.left.name = targetName;
+			}
+			if (node.right.name === originName) {
+				node.right.name = targetName;
+			}
+		}
 
     // 继续往下遍历
     return next(node, ctx)
