@@ -13,7 +13,7 @@
   "scripts": {
     "test-final": "ava final/test",
     "test-homework-1": "ava homework/1/rename.test.js",
-    "test-homework-2": "ava homework/2/eval.test.js",  
+    "test-homework-2": "ava homework/2/eval.test.js",
     "test-homework-3": "ava homework/3/eval.test.js"
   }
 }
