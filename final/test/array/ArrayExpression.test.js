@@ -4,7 +4,7 @@ const { customEval, Scope } = require('../../eval');
 
 test("ArrayExpression-1", t => {
   const scope = new Scope();
-
+  
   const arr = customEval(
     `
 const arr = [1, 2, 3];

@@ -33,7 +33,7 @@ module.exports = func;
   `,
     scope
   );
-
+  
   t.true(typeof func === "function");
   t.deepEqual(func.length, 0);
   t.deepEqual(func.name, "");
