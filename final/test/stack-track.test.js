@@ -17,5 +17,6 @@ get();`,
     t.fail("it should throw an error");
   } catch (err) {
     // ignore
+    t.pass("it has thrown an error")
   }
 });

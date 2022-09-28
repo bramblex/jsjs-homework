@@ -33,5 +33,6 @@ module.exports = {a: a, b: b};
     scope
   );
   t.deepEqual(a, 2);
-  t.deepEqual(b, undefined);
+  // t.deepEqual(b, undefined);
+  t.deepEqual(b, 3);
 });
