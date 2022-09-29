@@ -19,7 +19,7 @@ class Scope {
             this.type = value;
             break;
           default:
-            this.variables[name] = { value: value, kind: 'var', tdz: false, writable: false };
+            this.variables[name] = { value: value, kind: 'var', tdz: false, writable: true };
         }
       }
       if (this.type === undefined) {
@@ -133,24 +133,20 @@ class ReturnObject {
   constructor(value = undefined) {
     this.value = value;
   }
-  toString() {
-    return 'ReturnObject{' + Object.keys(this).map(attr => `${attr}: ${this[attr]}`).join(', ') + '}'
-  }
 }
 class BreakObject {
   constructor(label = undefined) {
     this.label = label;
-  }
-  toString() {
-    return 'BreakObject{' + Object.keys(this).map(attr => `${attr}: ${this[attr]}`).join(', ') + '}'
   }
 }
 class ContinueObject {
   constructor(label = undefined) {
     this.label = label;
   }
-  toString() {
-    return 'ContinueObject{' + Object.keys(this).map(attr => `${attr}: ${this[attr]}`).join(', ') + '}'
+}
+class YieldObject {
+  constructor(yeildValue) {
+    this.yeildValue = yeildValue;
   }
 }
 
@@ -206,20 +202,22 @@ function evaluate(node, scope) {
         : evaluate(node.object, scope)[node.property.name]; // obj.propName
 
     case 'VariableDeclaration':
-      node.declarations.forEach(declaration => {
+      for (const declaration of node.declarations) {
         if (declaration.init) {
           const value = evaluate(declaration.init, scope);
           // if (declaration.init.type === 'FunctionExpression' && value instanceof Function && value.name === '') { // 特殊处理：函数表达式的name
           //   Object.defineProperty(value, 'name', { value: declaration.id.name });
           // }
+          if (value instanceof YieldObject) {
+            return value;
+          }
           scope.set(declaration.id.name, value, true);
         }
-      });
+      }
       return;
 
     case 'ExpressionStatement':
-      evaluate(node.expression, scope);
-      return;
+      return evaluate(node.expression, scope);
 
     case 'UpdateExpression': {
       let oldValue = evaluate(node.argument, scope);
@@ -322,15 +320,30 @@ function evaluate(node, scope) {
       return result;
     }
 
-    case 'UnaryExpression':
+    case 'UnaryExpression': {
+      let op;
       switch (node.operator) {
-        case '-': return -evaluate(node.argument, scope);
-        case '+': return +evaluate(node.argument, scope);
-        case '!': return !evaluate(node.argument, scope);
-        case '~': return ~evaluate(node.argument, scope);
+        case '-':
+          op = evaluate(node.argument, scope);
+          if (op instanceof YieldObject) { return op; }
+          return -op;
+        case '+':
+          op = evaluate(node.argument, scope);
+          if (op instanceof YieldObject) { return op; }
+          return +op;
+        case '!':
+          op = evaluate(node.argument, scope);
+          if (op instanceof YieldObject) { return op; }
+          return !op;
+        case '~':
+          op = evaluate(node.argument, scope);
+          if (op instanceof YieldObject) { return op; }
+          return ~op;
         case 'typeof':
           try {
-            return typeof evaluate(node.argument, scope);
+            op = evaluate(node.argument, scope);
+            if (op instanceof YieldObject) { return op; }
+            return typeof op;
           } catch (err) {
             if (err.message === `Can't find variable`) {
               return 'undefined';
@@ -339,41 +352,56 @@ function evaluate(node, scope) {
               throw err;
             }
           }
-        case 'void': return void evaluate(node.argument, scope);
+        case 'void':
+          op = evaluate(node.argument, scope);
+          if (op instanceof YieldObject) { return op; }
+          return void op;
         case 'delete':
+          const obj = evaluate(node.argument.object, scope);
+          if (obj instanceof YieldObject) { return obj; }
+          let propName;
           if (node.argument.computed) { // obj[propExp]
-            delete evaluate(node.argument.object, scope)[evaluate(node.argument.property, scope)];
+            propName = evaluate(node.argument.property, scope);
           } else { // obj.propName
-            delete evaluate(node.argument.object, scope)[node.argument.property.name];
+            propName = node.argument.property.name;
           }
+          if (propName instanceof YieldObject) { return propName; }
+          delete obj[propName];
           return;
       }
+    }
 
-    case 'BinaryExpression':
+    case 'BinaryExpression': {
+      const op1 = evaluate(node.left, scope);
+      if (op1 instanceof YieldObject) { return op1; }
+      const op2 = evaluate(node.right, scope);
+      if (op2 instanceof YieldObject) { return op2; }
       switch (node.operator) {
-        case '+': return evaluate(node.left, scope) + evaluate(node.right, scope);
-        case '-': return evaluate(node.left, scope) - evaluate(node.right, scope);
-        case '*': return evaluate(node.left, scope) * evaluate(node.right, scope);
-        case '/': return evaluate(node.left, scope) / evaluate(node.right, scope);
-        case '%': return evaluate(node.left, scope) % evaluate(node.right, scope);
-        case '**': return evaluate(node.left, scope) ** evaluate(node.right, scope);
-        case '<': return evaluate(node.left, scope) < evaluate(node.right, scope);
-        case '<=': return evaluate(node.left, scope) <= evaluate(node.right, scope);
-        case '>': return evaluate(node.left, scope) > evaluate(node.right, scope);
-        case '>=': return evaluate(node.left, scope) >= evaluate(node.right, scope);
-        case '==': return evaluate(node.left, scope) == evaluate(node.right, scope);
-        case '!=': return evaluate(node.left, scope) != evaluate(node.right, scope);
-        case '===': return evaluate(node.left, scope) === evaluate(node.right, scope);
-        case '!==': return evaluate(node.left, scope) !== evaluate(node.right, scope);
-        case '^': return evaluate(node.left, scope) ^ evaluate(node.right, scope);
-        case '&': return evaluate(node.left, scope) & evaluate(node.right, scope);
-        case '|': return evaluate(node.left, scope) | evaluate(node.right, scope);
-        case '<<': return evaluate(node.left, scope) << evaluate(node.right, scope);
-        case '>>': return evaluate(node.left, scope) >> evaluate(node.right, scope);
-        case '>>>': return evaluate(node.left, scope) >>> evaluate(node.right, scope);
-        case 'in': return evaluate(node.left, scope) in evaluate(node.right, scope);
-        case 'instanceof': return evaluate(node.left, scope) instanceof evaluate(node.right, scope);
+        case '+': return op1 + op2;
+        case '-': return op1 - op2;
+        case '*': return op1 * op2;
+        case '/': return op1 / op2;
+        case '%': return op1 % op2;
+        case '**': return op1 ** op2;
+        case '<': return op1 < op2;
+        case '<=': return op1 <= op2;
+        case '>': return op1 > op2;
+        case '>=': return op1 >= op2;
+        case '==': return op1 == op2;
+        case '!=': return op1 != op2;
+        case '===': return op1 === op2;
+        case '!==': return op1 !== op2;
+        case '^': return op1 ^ op2;
+        case '&': return op1 & op2;
+        case '|': return op1 | op2;
+        case '<<': return op1 << op2;
+        case '>>': return op1 >> op2;
+        case '>>>': return op1 >>> op2;
+        case 'in': return op1 in op2;
+        case 'instanceof': return op1 instanceof op2;
       }
+    }
+
 
     case 'LogicalExpression':
       if (node.operator === '||') {
@@ -393,31 +421,105 @@ function evaluate(node, scope) {
     }
 
     case 'FunctionExpression': {
-      const f = function (...args) {
-        const functionScope = new Scope({ type: 'function' }, scope);
-        functionScope.declare('var', 'thisArg');
-        functionScope.set('thisArg', this);
-        functionScope.declare('var', 'new_target');
-        functionScope.set('new_target', new.target);
-        for (let i = 0; i < node.params.length; i++) {
-          functionScope.declare('var', node.params[i].name);
-          functionScope.set(node.params[i].name, i < args.length ? args[i] : undefined, true);
-        }
-        node.body.body.forEach(stat => {
-          hoist(stat, functionScope, true);
-        });
-        let result;
-        for (const stat of node.body.body) {
-          result = evaluate(stat, functionScope);
-          if (result instanceof ReturnObject) {
-            return result.value;
+      if (!node.generator) {
+        const f = function (...args) {
+          const functionScope = new Scope({ type: 'function' }, scope);
+          functionScope.declare('var', 'thisArg');
+          functionScope.set('thisArg', this);
+          functionScope.declare('var', 'new_target');
+          functionScope.set('new_target', new.target);
+          for (let i = 0; i < node.params.length; i++) {
+            functionScope.declare('var', node.params[i].name);
+            functionScope.set(node.params[i].name, i < args.length ? args[i] : undefined, true);
           }
+          node.body.body.forEach(stat => {
+            hoist(stat, functionScope, true);
+          });
+          let result;
+          for (const stat of node.body.body) {
+            result = evaluate(stat, functionScope);
+            if (result instanceof ReturnObject) {
+              return result.value;
+            }
+          }
+          return;
         }
-        return;
+        Object.defineProperty(f, 'name', { value: node.id !== null ? node.id.name : '' });
+        Object.defineProperty(f, 'length', { value: node.params.length });
+        return f;
+      } else { // generator
+        return function (...args) {
+          const genScope = new Scope({ type: 'function' }, scope);
+          for (let i = 0; i < node.params.length; i++) {
+            genScope.declare('var', node.params[i].name);
+            genScope.set(node.params[i].name, i < args.length ? args[i] : undefined, true);
+          }
+          node.body.body.forEach(stat => {
+            hoist(stat, genScope, true);
+          });
+          genScope.declare('var', 'yieldType');
+          const genObj = {
+            genScope, // 作用域
+            stats: node.body.body, // 函数体
+            idx: undefined, // 上次退出的位置
+            closed: false, // 是否执行完毕
+            next(arg) {
+              if (this.closed) {
+                return { value: undefined, done: true };
+              } else {
+                if (this.idx === undefined) { // 首次执行
+                  // 第一次不会接收arg
+                  // 执行直到yield或return
+                  this.genScope.set('yieldType', 'exit');
+                  let result;
+                  for (let i = 0; i < this.stats.length; i++) {
+                    result = evaluate(this.stats[i], this.genScope);
+                    if (result instanceof ReturnObject) {
+                      this.closed = true;
+                      return { value: result.value, done: true };
+                    } else if (result instanceof YieldObject) {
+                      this.idx = i;
+                      return { value: result.yeildValue, done: false };
+                    }
+                  }
+                  this.closed = true;
+                  return { value: undefined, done: true };
+                } else { // 继续执行
+                  this.genScope.declare('var', 'arg');
+                  this.genScope.set('arg', arg);
+                  // 从yield进入
+                  this.genScope.set('yieldType', 'enter');
+                  evaluate(this.stats[i], this.genScope);
+                  // 执行直到yield或return
+                  this.genScope.set('yieldType', 'exit');
+                  for (let i = this.idx + 1; i < this.stats.length; i++) {
+                    result = evaluate(this.stats[i], this.genScope);
+                    if (result instanceof ReturnObject) {
+                      this.closed = true;
+                      return { value: result.value, done: true };
+                    } else if (result instanceof YieldObject) {
+                      this.idx = i;
+                      return { value: result.yeildValue, done: false };
+                    }
+                  }
+                  this.closed = true;
+                  return { value: undefined, done: true };
+                }
+              }
+            }
+          }
+          return genObj;
+        }
       }
-      Object.defineProperty(f, 'name', { value: node.id !== null ? node.id.name : '' });
-      Object.defineProperty(f, 'length', { value: node.params.length });
-      return f;
+    }
+
+    case 'YieldExpression': {
+      const type = scope.get('yieldType');
+      if (type === 'exit') { // 从yield退出
+        return new YieldObject(evaluate(node.argument, scope));
+      } else if (type === 'enter') { // 从yield进入
+        return scope.get('arg');
+      }
     }
 
     case 'ArrowFunctionExpression':
@@ -736,32 +838,99 @@ function hoist(node, scope, inScope) {
         declareScope = scope.parent;
       }
       if (declareScope !== undefined) {
-        declareScope.declare('var', node.id.name);
-        const f = function (...args) {
-          const functionScope = new Scope({ type: 'function' }, scope);
-          functionScope.declare('var', 'thisArg');
-          functionScope.set('thisArg', this);
-          functionScope.declare('var', 'new_target');
-          functionScope.set('new_target', new.target);
-          for (let i = 0; i < node.params.length; i++) {
-            functionScope.declare('var', node.params[i].name);
-            functionScope.set(node.params[i].name, i < args.length ? args[i] : undefined, true);
-          }
-          node.body.body.forEach(stat => {
-            hoist(stat, functionScope, true);
-          });
-          let result;
-          for (const stat of node.body.body) {
-            result = evaluate(stat, functionScope);
-            if (result instanceof ReturnObject) {
-              return result.value;
+        if (!node.generator) {
+          declareScope.declare('var', node.id.name);
+          const f = function (...args) {
+            const functionScope = new Scope({ type: 'function' }, scope);
+            functionScope.declare('var', 'thisArg');
+            functionScope.set('thisArg', this);
+            functionScope.declare('var', 'new_target');
+            functionScope.set('new_target', new.target);
+            for (let i = 0; i < node.params.length; i++) {
+              functionScope.declare('var', node.params[i].name);
+              functionScope.set(node.params[i].name, i < args.length ? args[i] : undefined, true);
             }
+            node.body.body.forEach(stat => {
+              hoist(stat, functionScope, true);
+            });
+            let result;
+            for (const stat of node.body.body) {
+              result = evaluate(stat, functionScope);
+              if (result instanceof ReturnObject) {
+                return result.value;
+              }
+            }
+            return;
           }
-          return;
+          Object.defineProperty(f, 'name', { value: node.id.name });
+          Object.defineProperty(f, 'length', { value: node.params.length });
+          declareScope.set(node.id.name, f, true);
+        } else { // generator
+          declareScope.declare('var', node.id.name);
+          const f = function (...args) {
+            const genScope = new Scope({ type: 'function' }, scope);
+            for (let i = 0; i < node.params.length; i++) {
+              genScope.declare('var', node.params[i].name);
+              genScope.set(node.params[i].name, i < args.length ? args[i] : undefined, true);
+            }
+            node.body.body.forEach(stat => {
+              hoist(stat, genScope, true);
+            });
+            genScope.declare('var', 'yieldType');
+            const genObj = {
+              genScope, // 作用域
+              stats: node.body.body, // 函数体
+              idx: undefined, // 上次退出的位置
+              closed: false, // 是否执行完毕
+              next(arg) {
+                if (this.closed) {
+                  return { value: undefined, done: true };
+                } else {
+                  if (this.idx === undefined) { // 首次执行
+                    // 第一次不会接收arg
+                    // 执行直到yield或return
+                    this.genScope.set('yieldType', 'exit');
+                    let result;
+                    for (let i = 0; i < this.stats.length; i++) {
+                      result = evaluate(this.stats[i], this.genScope);
+                      if (result instanceof ReturnObject) {
+                        this.closed = true;
+                        return { value: result.value, done: true };
+                      } else if (result instanceof YieldObject) {
+                        this.idx = i;
+                        return { value: result.yeildValue, done: false };
+                      }
+                    }
+                    this.closed = true;
+                    return { value: undefined, done: true };
+                  } else { // 继续执行
+                    this.genScope.declare('var', 'arg');
+                    this.genScope.set('arg', arg);
+                    // 从yield进入
+                    this.genScope.set('yieldType', 'enter');
+                    evaluate(this.stats[this.idx], this.genScope);
+                    // 执行直到yield或return
+                    this.genScope.set('yieldType', 'exit');
+                    for (let i = this.idx + 1; i < this.stats.length; i++) {
+                      result = evaluate(this.stats[i], this.genScope);
+                      if (result instanceof ReturnObject) {
+                        this.closed = true;
+                        return { value: result.value, done: true };
+                      } else if (result instanceof YieldObject) {
+                        this.idx = i;
+                        return { value: result.yeildValue, done: false };
+                      }
+                    }
+                    this.closed = true;
+                    return { value: undefined, done: true };
+                  }
+                }
+              }
+            }
+            return genObj;
+          }
+          declareScope.set(node.id.name, f, true);
         }
-        Object.defineProperty(f, 'name', { value: node.id.name });
-        Object.defineProperty(f, 'length', { value: node.params.length });
-        declareScope.set(node.id.name, f, true);
       }
       break;
     }
