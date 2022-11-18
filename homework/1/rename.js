@@ -7,7 +7,30 @@ function transform(root, originName, targetName) {
   return traverse((node, ctx, next) => {
 
     // TODO: 作业代码写在这里
-    if (node.type === 'xxx') {
+    switch(node.type) {
+      case "VariableDeclarator":
+        if (node.id.name === originName) {
+          node.id.name = targetName
+        }
+
+      case "FunctionDeclaration":
+        if (node.id.name === originName) {
+          node.id.name = targetName
+        }
+
+        case "MemberExpression":
+          if (node.object && node.object.name === originName) {
+            node.object.name = targetName
+          }
+
+        case "BinaryExpression":
+          if (node.left && node.left.name === originName) {
+            node.left.name = targetName
+          }
+          if (node.right && node.right.name === originName) {
+            node.right.name = targetName
+          }
+
     }
 
     // 继续往下遍历
