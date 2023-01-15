@@ -27,7 +27,7 @@ test('声明 - 初级挑战', t => {
     if (err === undefined) {
       t.deepEqual(customerEval(sourceCode), undefined)
     } else {
-      t.throws(() => customerEval(sourceCode), err)
+      t.throws(() => customerEval(sourceCode), { instanceOf: err.constructor, message: err.message })
     }
   }
 })
